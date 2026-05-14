@@ -108,7 +108,7 @@ Numbered concretely so you can grep logs for each step.
 | `gh_post_comment` | Comment on the originating issue or any specified PR/issue number. | All `gh_*` errors propagate as `RpcCommandError` the agent can recover from. |
 | `repro_record` | Persist a reproduction transcript (command, output, exit code, reproduced flag) under `context/repro/`. | Required before claiming a fix; PR template references the path. |
 | `gh_push_branch` | `git push --set-upstream origin <branch>` from the worktree. | Refuses to push when (a) working tree dirty, (b) any commit's author ≠ configured identity. |
-| `gh_open_pr` | Open a PR from the worktree branch. | Validates body has `## Repro`/`## Cause`/`## Fix`/`## Verification` headers AND `Fixes #N` (or `Closes`/`Resolves`) so GitHub auto-closes the issue on merge. Runs `bun check` first when the repo defines a `check` script; a failure raises a recoverable tool error so the agent fixes, recommits, and retries before any PR is created. Idempotent push first. Writes `pr.json` artifact + updates `issues.pr_number/state` in sqlite. |
+| `gh_open_pr` | Open a PR from the worktree branch. | Validates body has `## Repro`/`## Cause`/`## Fix`/`## Verification` headers AND `Fixes #N` (or `Closes`/`Resolves`) so GitHub auto-closes the issue on merge. Runs `bun run fix` then `bun check` when the repo defines those scripts: any formatter diff is auto-committed as `style: bun run fix` against the configured bot identity; a `bun check` failure raises a recoverable tool error so the agent fixes the cause and retries. Idempotent push after the gates. Writes `pr.json` artifact + updates `issues.pr_number/state` in sqlite. |
 | `gh_request_review` | Add reviewers / assignees. | Optional. |
 | `mark_unable_to_reproduce` | Close the loop without a PR. Posts a structured "Could not reproduce" comment with diagnosis + info request and marks issue `abandoned`. | Use when reproduction genuinely fails after a real attempt. |
 | `fetch_issue_thread` | Refetch the issue + comments from GitHub mid-task. | For long-running tasks that want fresh context. |
@@ -130,11 +130,9 @@ Every host-tool invocation is audited into the `tool_calls` table with timestamp
   ack comment            answer in one         restate + feasibility
   repro_record           gh_post_comment       in one gh_post_comment
   diagnose               (no PR, no branch)    (no PR; wait for opt-in)
-  bun run fix
   commit (Fixes #N)
-  bun check
   gh_push_branch
-  gh_open_pr (template)
+  gh_open_pr  ← runs `bun run fix` + `bun check` deterministically
   link comment
 ```
 
@@ -323,7 +321,7 @@ docker compose logs -f robomp                 # in another shell, watch each too
   1. branch must match the workspace branch (no opportunistic pushing to arbitrary refs),
   2. working tree must be clean,
   3. every commit between `origin/<default-branch>..HEAD` must carry the configured `ROBOMP_GIT_AUTHOR_NAME` + `ROBOMP_GIT_AUTHOR_EMAIL`.
-- **Pre-PR check** in `gh_open_pr`: when the repository defines a package `check` script, `bun check` must pass before the branch is pushed or the PR is created. Failures are returned to the agent as `RpcCommandError` so it can iterate and retry.
+- **Pre-PR gates** in `gh_open_pr`: when the repository defines them, `bun run fix` runs first (any resulting diff is auto-committed as `style: bun run fix` with the configured bot identity) and `bun check` runs second. A failing `bun check` is returned to the agent as `RpcCommandError` so it can iterate at the source and retry. Both gates short-circuit before the PR is pushed/created.
 - **`/webhook/github` is the only public path.** The recommended Cloudflare ingress config restricts the tunnel hostname to that exact path; admin/inspection routes are localhost-only.
 - **LLM credentials never enter the container.** The host's LiteLLM proxy is reached via `extra_hosts: ["llm-gateway.internal:host-gateway"]`; the only thing mounted in is `~/.omp/agent/models.yml` (whose `apiKey` fields are stub characters — real auth happens at the gateway).
 
@@ -377,8 +375,8 @@ robomp/
 | Container exits immediately with `PI_ROOT … missing` | The host's pi checkout isn't mounted at `/work/pi`. Adjust `volumes:` (or `PI_ROOT=` env when invoking compose). |
 | `git push` fails with `Authentication required` | The PAT does not have push access on the repo, or `ROBOMP_BOT_LOGIN` doesn't match the PAT's account. The credentialed remote URL is `https://<bot_login>:<token>@github.com/<owner>/<repo>.git`. |
 | `refusing to push: commit author identity mismatch` | Some commit on the branch was authored under a different name/email. Amend with `git commit --amend --reset-author --no-edit`. The error lists every offending sha. |
-| `refusing to push: working tree is dirty` | Agent has uncommitted edits (often from `bun fix` running after a commit). `git add -A && git commit --amend --no-edit --reset-author` and retry. |
-| ``refusing to open PR: `bun check` failed before PR creation`` | The pre-PR check failed. Fix the reported failure, rerun `bun check`, commit or amend any resulting changes, then retry `gh_open_pr`. |
+| `refusing to push: working tree is dirty` | Agent has uncommitted edits. `git add -A && git commit --amend --no-edit --reset-author` and retry — or just call `gh_open_pr`, which folds `bun run fix` output into a `style:` commit automatically. |
+| ``refusing to open PR: `bun check` failed before PR creation`` | The deterministic pre-PR `bun check` step failed. Fix the reported failure at the source, commit, and retry `gh_open_pr` (no need to rerun `bun run fix` yourself — the host tool does that too). |
 | Agent loops on the same comment | A non-bot reply triggered `handle_comment`; check `/events?limit=20` to see what was queued and `/issues` for the per-issue state. |
 | PR opened without the four template sections, or without `Fixes #N` | Shouldn't happen — `gh_open_pr` validates both. If you see it, the agent reached an out-of-process write somehow; inspect `tool_calls`. |
 | `omp` fails with `Failed to load pi_natives` | The `pi_natives.linux-<arch>.node` is missing. Rebuild the image (`just build`); the `natives-builder` stage compiles it from `.pi-context/`. |

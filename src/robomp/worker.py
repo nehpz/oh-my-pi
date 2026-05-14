@@ -25,6 +25,7 @@ from omp_rpc import (
 )
 
 from robomp import host_tools, persona
+from robomp.cancellation import register_cancel_hook, unregister_cancel_hook
 from robomp.config import Settings
 from robomp.db import Database, issue_key
 from robomp.github_client import CommentInfo, GitHubClient, IssueInfo, RepoInfo
@@ -49,13 +50,14 @@ class TaskInputs:
 @dataclass(slots=True, frozen=True)
 class ThreadMessage:
     """One entry in the conversation a directive carries to the agent."""
-    kind: str          # issue_body | pr_body | comment | review_comment | review
+
+    kind: str  # issue_body | pr_body | comment | review_comment | review
     author: str
     body: str
     created_at: str
-    path: str | None = None     # review_comment only
-    line: int | None = None     # review_comment only
-    state: str | None = None    # review only (APPROVED / CHANGES_REQUESTED / COMMENTED)
+    path: str | None = None  # review_comment only
+    line: int | None = None  # review_comment only
+    state: str | None = None  # review only (APPROVED / CHANGES_REQUESTED / COMMENTED)
 
 
 @dataclass(slots=True, frozen=True)
@@ -206,57 +208,65 @@ def _run_rpc_blocking(
         startup_timeout=60.0,
         max_event_history=50_000,
     ) as client:
-        client.install_headless_ui()
-        client.on_tool_execution_end(_on_tool_end)
-        client.on_message_update(_on_msg)
+        # Arm cancellation: from this point the API can kill the omp subprocess
+        # out from under us, which makes `prompt_and_wait` raise an `RpcError`
+        # we'll let propagate. The `with` exit calls `client.stop()` again, but
+        # it's idempotent.
+        register_cancel_hook(client.stop)
+        try:
+            client.install_headless_ui()
+            client.on_tool_execution_end(_on_tool_end)
+            client.on_message_update(_on_msg)
 
-        phases = persona.seed_phases(task_kind)
-        if phases:
-            try:
-                if task_kind == "triage_issue":
-                    # Fresh session: seed the full plan.
-                    client.set_todos(phases)
-                else:
-                    # Resumed session: keep prior phases (e.g. Reproduce / Fix / PR)
-                    # so the agent still sees the context, but append the
-                    # follow-up phase at the end.
-                    existing = list(client.get_todos())
-                    merged = [
-                        {
-                            "id": p.id,
-                            "name": p.name,
-                            "tasks": [
-                                {
-                                    "id": t.id,
-                                    "content": t.content,
-                                    "status": t.status,
-                                    "notes": t.notes,
-                                    "details": t.details,
-                                }
-                                for t in p.tasks
-                            ],
-                        }
-                        for p in existing
-                    ] + phases
-                    client.set_todos(merged)
-            except RpcError as exc:
-                log.warning("set_todos failed", extra={"err": str(exc)})
+            phases = persona.seed_phases(task_kind)
+            if phases:
+                try:
+                    if task_kind == "triage_issue":
+                        # Fresh session: seed the full plan.
+                        client.set_todos(phases)
+                    else:
+                        # Resumed session: keep prior phases (e.g. Reproduce / Fix / PR)
+                        # so the agent still sees the context, but append the
+                        # follow-up phase at the end.
+                        existing = list(client.get_todos())
+                        merged = [
+                            {
+                                "id": p.id,
+                                "name": p.name,
+                                "tasks": [
+                                    {
+                                        "id": t.id,
+                                        "content": t.content,
+                                        "status": t.status,
+                                        "notes": t.notes,
+                                        "details": t.details,
+                                    }
+                                    for t in p.tasks
+                                ],
+                            }
+                            for p in existing
+                        ] + phases
+                        client.set_todos(merged)
+                except RpcError as exc:
+                    log.warning("set_todos failed", extra={"err": str(exc)})
 
-        log.info(
-            "rpc_start",
-            extra={"issue": bindings.issue_key, "task": task_kind, "branch": bindings.workspace.branch},
-        )
-        turn = client.prompt_and_wait(prompt, timeout=settings.task_timeout_seconds)
-        log.info(
-            "rpc_done",
-            extra={
-                "issue": bindings.issue_key,
-                "task": task_kind,
-                "messages": len(turn.messages),
-                "events": len(turn.events),
-            },
-        )
-        return turn.assistant_text
+            log.info(
+                "rpc_start",
+                extra={"issue": bindings.issue_key, "task": task_kind, "branch": bindings.workspace.branch},
+            )
+            turn = client.prompt_and_wait(prompt, timeout=settings.task_timeout_seconds)
+            log.info(
+                "rpc_done",
+                extra={
+                    "issue": bindings.issue_key,
+                    "task": task_kind,
+                    "messages": len(turn.messages),
+                    "events": len(turn.events),
+                },
+            )
+            return turn.assistant_text
+        finally:
+            unregister_cancel_hook()
 
 
 async def run_task(

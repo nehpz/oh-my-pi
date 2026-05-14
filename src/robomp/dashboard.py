@@ -57,7 +57,9 @@ def tail_jsonl(path: Path, *, limit: int) -> list[dict[str, Any]]:
 
 
 # Self-contained dashboard page. Vanilla JS, no external assets, no build step.
-INDEX_HTML = """<!doctype html>
+# `__ROBOMP_CONFIG__` is replaced by `render_index()` with the per-instance
+# config JSON (e.g. the replay token the server was configured with).
+_INDEX_TEMPLATE = """<!doctype html>
 <html lang="en">
 <head>
 <meta charset="utf-8" />
@@ -200,8 +202,7 @@ INDEX_HTML = """<!doctype html>
       <input id="t-issue" type="text" placeholder="owner/repo#42" autocomplete="off" />
       <button class="primary" id="t-triage">Fetch &amp; triage</button>
       <button id="t-retry">Retry latest event</button>
-      <span class="row-label" style="margin-left:auto">token</span>
-      <input id="t-token" type="password" placeholder="X-Robomp-Replay-Token" autocomplete="off" />
+
     </div>
     <div class="trigger-status" id="t-status"></div>
     <div class="trigger-toolbar">
@@ -258,6 +259,7 @@ INDEX_HTML = """<!doctype html>
   </section>
 </main>
 
+<script id="robomp-config" type="application/json">__ROBOMP_CONFIG__</script>
 <script>
 const LEVEL_ORDER = { DEBUG: 10, INFO: 20, WARNING: 30, ERROR: 40, RAW: 20 };
 const TERMINAL_ISSUE_STATES = new Set(["merged", "closed", "abandoned"]);
@@ -316,6 +318,9 @@ function renderWorking(running, inflight) {
       <td><span class="pill running">running</span></td>
       <td>${elapsed}</td>
       <td class="muted">attempt ${e.attempts}</td>
+      <td>${CONFIG.replayEnabled
+        ? `<button class="small" data-cancel="${esc(e.delivery_id)}">cancel</button>`
+        : '<span class="muted">—</span>'}</td>
     </tr>`;
   });
   // Workers that grabbed an issue key but haven't started a DB row yet (or finished).
@@ -328,10 +333,11 @@ function renderWorking(running, inflight) {
       <td><span class="pill running">inflight</span></td>
       <td>—</td>
       <td class="muted">held by pool</td>
+      <td><span class="muted">—</span></td>
     </tr>`);
   }
   $("working").innerHTML =
-    `<table><thead><tr><th>issue</th><th>event</th><th>state</th><th>elapsed</th><th></th></tr></thead><tbody>${rows.join("")}</tbody></table>`;
+    `<table><thead><tr><th>issue</th><th>event</th><th>state</th><th>elapsed</th><th></th><th></th></tr></thead><tbody>${rows.join("")}</tbody></table>`;
 }
 
 function renderIssues(issues) {
@@ -434,8 +440,13 @@ async function tick() {
 }
 
 // ----- trigger -----
-const TOKEN_KEY = "robomp.replay_token";
-$("t-token").value = localStorage.getItem(TOKEN_KEY) || "";
+const CONFIG = (() => {
+  try { return JSON.parse(document.getElementById("robomp-config").textContent); }
+  catch (_) { return { replayEnabled: false, replayToken: "" }; }
+})();
+const AUTH_HEADERS = CONFIG.replayEnabled
+  ? { "X-Robomp-Replay-Token": CONFIG.replayToken }
+  : {};
 
 function setStatus(text, kind) {
   const el = $("t-status");
@@ -444,11 +455,7 @@ function setStatus(text, kind) {
 }
 
 async function postTrigger(body) {
-  const token = $("t-token").value.trim();
-  if (token) localStorage.setItem(TOKEN_KEY, token);
-  else localStorage.removeItem(TOKEN_KEY);
-  const headers = { "Content-Type": "application/json" };
-  if (token) headers["X-Robomp-Replay-Token"] = token;
+  const headers = { "Content-Type": "application/json", ...AUTH_HEADERS };
   setStatus("…", "");
   let resp;
   try {
@@ -487,14 +494,43 @@ $("events").addEventListener("click", (ev) => {
   postTrigger({ mode: "retry", delivery_id: btn.dataset.retry });
 });
 
+async function cancelDelivery(deliveryId, btn) {
+  if (!confirm("Kill this running task? The omp subprocess dies and the row lands in 'failed'.")) {
+    return;
+  }
+  if (btn) { btn.disabled = true; btn.textContent = "cancelling…"; }
+  try {
+    const resp = await fetch("api/cancel", {
+      method: "POST",
+      headers: { "Content-Type": "application/json", ...AUTH_HEADERS },
+      body: JSON.stringify({ delivery_id: deliveryId }),
+    });
+    if (!resp.ok) {
+      let msg = resp.statusText;
+      try { msg = (await resp.json()).detail || msg; } catch (_) {}
+      setStatus(`cancel ${resp.status}: ${msg}`, "err");
+      if (btn) { btn.disabled = false; btn.textContent = "cancel"; }
+      return;
+    }
+    const data = await resp.json();
+    setStatus(`cancel signaled: ${deliveryId.slice(0, 8)} (fired=${data.fired})`, "ok");
+  } catch (err) {
+    setStatus("network error: " + err.message, "err");
+    if (btn) { btn.disabled = false; btn.textContent = "cancel"; }
+    return;
+  }
+  tick();
+}
+$("working").addEventListener("click", (ev) => {
+  const btn = ev.target.closest("button[data-cancel]");
+  if (!btn) return;
+  cancelDelivery(btn.dataset.cancel, btn);
+});
+
 // ----- browse -----
 let browseCache = { issues: [], errors: [], repos: [], when: 0 };
 
-function authHeaders() {
-  const token = $("t-token").value.trim();
-  if (token) localStorage.setItem(TOKEN_KEY, token);
-  return token ? { "X-Robomp-Replay-Token": token } : {};
-}
+function authHeaders() { return { ...AUTH_HEADERS }; }
 
 async function loadBrowse() {
   const state = $("b-state").value;
@@ -565,8 +601,17 @@ $("b-list").addEventListener("click", (ev) => {
   if (tri) { $("t-issue").value = tri.dataset.triage; postTrigger({ mode: "triage", issue: tri.dataset.triage }); }
   else if (ret) { $("t-issue").value = ret.dataset.retryIssue; postTrigger({ mode: "retry", issue: ret.dataset.retryIssue }); }
 });
-// Kick off the browse list as soon as the dashboard mounts.
-loadBrowse();
+// Kick off the browse list as soon as the dashboard mounts (if the trigger
+// surface is enabled — otherwise it would just 404 on every refresh).
+if (CONFIG.replayEnabled) {
+  loadBrowse();
+} else {
+  const triggerSection = document.querySelector("main > section.full");
+  if (triggerSection) {
+    triggerSection.innerHTML =
+      '<h2>trigger</h2><div class="empty">trigger disabled (set <code>ROBOMP_REPLAY_TOKEN</code> in the server env to enable)</div>';
+  }
+}
 
 $("log-level").addEventListener("change", tick);
 $("log-filter").addEventListener("input", tick);
@@ -578,4 +623,22 @@ setInterval(tick, 3000);
 """
 
 
-__all__ = ["INDEX_HTML", "tail_jsonl"]
+def render_index(replay_token: str | None) -> str:
+    """Render the dashboard HTML with the server's replay token baked in.
+
+    The token lands inside a `<script type="application/json">` block, which
+    the page parses at startup and attaches to every privileged fetch. The
+    user never sees or types it; the only credential to manage is the env var
+    on the server itself.
+    """
+    config = {
+        "replayEnabled": bool(replay_token),
+        "replayToken": replay_token or "",
+    }
+    # `</` would otherwise let an attacker-controlled token break out of the
+    # script element; escape it the standard way.
+    payload = json.dumps(config, separators=(",", ":")).replace("</", "<\\/")
+    return _INDEX_TEMPLATE.replace("__ROBOMP_CONFIG__", payload)
+
+
+__all__ = ["render_index", "tail_jsonl"]

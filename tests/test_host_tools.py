@@ -1039,3 +1039,335 @@ def test_gh_push_branch_does_not_run_repository_bun_scripts(
         check=True,
     )
     assert f"refs/heads/{ws.branch}" in refs.stdout.splitlines()
+
+
+def test_gh_open_pr_runs_fix_then_check_and_commits_fixup(
+    db: Database, tmp_path: Path, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    """gh_open_pr runs `bun run fix`, commits any diff as the bot, then runs `bun check`."""
+    import os
+    import subprocess
+
+    bare = tmp_path / "upstream.git"
+    bare.mkdir()
+    subprocess.run(["git", "init", "--bare", "--initial-branch=main", str(bare)], check=True, capture_output=True)
+    seed = tmp_path / "seed"
+    seed.mkdir()
+    env = os.environ | {
+        "GIT_AUTHOR_NAME": "robomp-bot",
+        "GIT_AUTHOR_EMAIL": "robomp-bot@example.invalid",
+        "GIT_COMMITTER_NAME": "robomp-bot",
+        "GIT_COMMITTER_EMAIL": "robomp-bot@example.invalid",
+    }
+    subprocess.run(["git", "init", "--initial-branch=main", str(seed)], check=True, capture_output=True)
+    (seed / "README.md").write_text("init\n")
+    for cmd in (
+        ["git", "-C", str(seed), "add", "."],
+        [
+            "git",
+            "-C",
+            str(seed),
+            "-c",
+            "user.email=robomp-bot@example.invalid",
+            "-c",
+            "user.name=robomp-bot",
+            "commit",
+            "-m",
+            "init",
+        ],
+        ["git", "-C", str(seed), "remote", "add", "origin", str(bare)],
+        ["git", "-C", str(seed), "push", "origin", "main"],
+    ):
+        subprocess.run(cmd, check=True, capture_output=True, env=env)
+
+    from robomp.sandbox import SandboxManager
+
+    mgr = SandboxManager(tmp_path / "workspaces")
+    ws = mgr.ensure_workspace(
+        repo="octo/widget",
+        number=42,
+        title="fix runs before check",
+        clone_url=str(bare),
+        default_branch="main",
+        author_name="robomp-bot",
+        author_email="robomp-bot@example.invalid",
+    )
+
+    # The fake bun:
+    #   `bun run fix` → rewrite src.txt and emit a small marker the test asserts on
+    #   `bun check`   → exit 0
+    #   anything else → fail
+    fix_calls = tmp_path / "fix-calls"
+    check_calls = tmp_path / "check-calls"
+    fakebin = tmp_path / "fakebin"
+    fakebin.mkdir()
+    fake_bun = fakebin / "bun"
+    fake_bun.write_text(
+        "#!/bin/sh\n"
+        'if [ "$1" = "run" ] && [ "$2" = "fix" ]; then\n'
+        f"    printf called >> {fix_calls}\n"
+        '    printf "formatted\\n" > src.txt\n'
+        "    exit 0\n"
+        "fi\n"
+        'if [ "$1" = "check" ]; then\n'
+        f"    printf called >> {check_calls}\n"
+        "    exit 0\n"
+        "fi\n"
+        'printf "unexpected bun call: %s\\n" "$*" >&2\n'
+        "exit 2\n"
+    )
+    fake_bun.chmod(0o755)
+    monkeypatch.setenv("PATH", f"{fakebin}{os.pathsep}{os.environ['PATH']}")
+
+    (ws.repo_dir / "package.json").write_text(
+        json.dumps({"scripts": {"fix": "...", "check": "..."}}) + "\n",
+        encoding="utf-8",
+    )
+    (ws.repo_dir / "src.txt").write_text("original\n")
+    subprocess.run(["git", "-C", str(ws.repo_dir), "add", "package.json", "src.txt"], check=True, capture_output=True)
+    subprocess.run(
+        [
+            "git",
+            "-C",
+            str(ws.repo_dir),
+            "-c",
+            "user.email=robomp-bot@example.invalid",
+            "-c",
+            "user.name=robomp-bot",
+            "commit",
+            "-m",
+            "feat: initial change",
+        ],
+        check=True,
+        capture_output=True,
+        env=env,
+    )
+
+    opened_pr: dict[str, Any] = {}
+
+    def handler(request: httpx.Request) -> httpx.Response:
+        opened_pr["url"] = str(request.url)
+        return httpx.Response(
+            201,
+            json={
+                "number": 7,
+                "html_url": "https://github.com/octo/widget/pull/7",
+                "head": {"ref": ws.branch},
+                "base": {"ref": "main"},
+                "state": "open",
+            },
+        )
+
+    github = GitHubClient("tok", transport=httpx.MockTransport(handler))
+    loop, thread = _make_loop_in_background()
+    try:
+        bindings = ToolBindings(
+            db=db,
+            github=github,
+            repo=_stub_repo(),
+            issue=IssueInfo(
+                repo="octo/widget",
+                number=42,
+                title="t",
+                body="",
+                state="open",
+                author="alice",
+                labels=(),
+                is_pull_request=False,
+            ),
+            workspace=ws,
+            loop=loop,
+            author_name="robomp-bot",
+            author_email="robomp-bot@example.invalid",
+        )
+        db.upsert_issue(
+            key=bindings.issue_key,
+            repo="octo/widget",
+            number=42,
+            state="reproducing",
+            branch=ws.branch,
+            session_dir=str(ws.session_dir),
+        )
+        tool = next(x for x in build(bindings) if x.name == "gh_open_pr")
+        body = "## Repro\nrepro\n\n## Cause\ncause\n\n## Fix\nfix\n\n## Verification\nran tests\n\nFixes #42\n"
+        result = tool.execute({"title": "fix: x", "body": body}, _ctx())
+    finally:
+        _stop_loop(loop, thread)
+
+    # Both bun stages ran, and fix preceded check.
+    assert fix_calls.read_text() == "called"
+    assert check_calls.read_text() == "called"
+    # The formatter diff was committed by the bot as a "style:" commit.
+    log = subprocess.run(
+        ["git", "-C", str(ws.repo_dir), "log", "--format=%an|%ae|%s", "-2"],
+        capture_output=True,
+        text=True,
+        check=True,
+    )
+    lines = log.stdout.strip().splitlines()
+    assert lines[0] == "robomp-bot|robomp-bot@example.invalid|style: bun run fix"
+    assert lines[1].endswith("|feat: initial change")
+    # Worktree is clean again (gate before push would have rejected otherwise).
+    status = subprocess.run(
+        ["git", "-C", str(ws.repo_dir), "status", "--porcelain"],
+        capture_output=True,
+        text=True,
+        check=True,
+    )
+    assert status.stdout == ""
+    # The PR actually opened.
+    assert "opened #7" in result
+    assert opened_pr["url"].endswith("/repos/octo/widget/pulls")
+    refs = subprocess.run(
+        ["git", "-C", str(bare), "for-each-ref", "--format=%(refname)"],
+        capture_output=True,
+        text=True,
+        check=True,
+    )
+    assert f"refs/heads/{ws.branch}" in refs.stdout.splitlines()
+
+
+def test_gh_open_pr_skips_fix_when_no_script(db: Database, tmp_path: Path, monkeypatch: pytest.MonkeyPatch) -> None:
+    """No `scripts.fix` entry → fix stage is a no-op even if `scripts.check` exists."""
+    import os
+    import subprocess
+
+    bare = tmp_path / "upstream.git"
+    bare.mkdir()
+    subprocess.run(["git", "init", "--bare", "--initial-branch=main", str(bare)], check=True, capture_output=True)
+    seed = tmp_path / "seed"
+    seed.mkdir()
+    env = os.environ | {
+        "GIT_AUTHOR_NAME": "robomp-bot",
+        "GIT_AUTHOR_EMAIL": "robomp-bot@example.invalid",
+        "GIT_COMMITTER_NAME": "robomp-bot",
+        "GIT_COMMITTER_EMAIL": "robomp-bot@example.invalid",
+    }
+    subprocess.run(["git", "init", "--initial-branch=main", str(seed)], check=True, capture_output=True)
+    (seed / "README.md").write_text("init\n")
+    for cmd in (
+        ["git", "-C", str(seed), "add", "."],
+        [
+            "git",
+            "-C",
+            str(seed),
+            "-c",
+            "user.email=robomp-bot@example.invalid",
+            "-c",
+            "user.name=robomp-bot",
+            "commit",
+            "-m",
+            "init",
+        ],
+        ["git", "-C", str(seed), "remote", "add", "origin", str(bare)],
+        ["git", "-C", str(seed), "push", "origin", "main"],
+    ):
+        subprocess.run(cmd, check=True, capture_output=True, env=env)
+
+    from robomp.sandbox import SandboxManager
+
+    mgr = SandboxManager(tmp_path / "workspaces")
+    ws = mgr.ensure_workspace(
+        repo="octo/widget",
+        number=42,
+        title="no fix script",
+        clone_url=str(bare),
+        default_branch="main",
+        author_name="robomp-bot",
+        author_email="robomp-bot@example.invalid",
+    )
+
+    fix_calls = tmp_path / "fix-calls"
+    check_calls = tmp_path / "check-calls"
+    fakebin = tmp_path / "fakebin"
+    fakebin.mkdir()
+    fake_bun = fakebin / "bun"
+    fake_bun.write_text(
+        "#!/bin/sh\n"
+        'if [ "$1" = "run" ] && [ "$2" = "fix" ]; then\n'
+        f"    printf called >> {fix_calls}\n"
+        "    exit 0\n"
+        "fi\n"
+        'if [ "$1" = "check" ]; then\n'
+        f"    printf called >> {check_calls}\n"
+        "    exit 0\n"
+        "fi\n"
+        "exit 2\n"
+    )
+    fake_bun.chmod(0o755)
+    monkeypatch.setenv("PATH", f"{fakebin}{os.pathsep}{os.environ['PATH']}")
+
+    (ws.repo_dir / "package.json").write_text(
+        json.dumps({"scripts": {"check": "..."}}) + "\n",
+        encoding="utf-8",
+    )
+    subprocess.run(["git", "-C", str(ws.repo_dir), "add", "package.json"], check=True, capture_output=True)
+    subprocess.run(
+        [
+            "git",
+            "-C",
+            str(ws.repo_dir),
+            "-c",
+            "user.email=robomp-bot@example.invalid",
+            "-c",
+            "user.name=robomp-bot",
+            "commit",
+            "-m",
+            "feat: x",
+        ],
+        check=True,
+        capture_output=True,
+        env=env,
+    )
+
+    def handler(_request: httpx.Request) -> httpx.Response:
+        return httpx.Response(
+            201,
+            json={
+                "number": 7,
+                "html_url": "https://github.com/octo/widget/pull/7",
+                "head": {"ref": ws.branch},
+                "base": {"ref": "main"},
+                "state": "open",
+            },
+        )
+
+    github = GitHubClient("tok", transport=httpx.MockTransport(handler))
+    loop, thread = _make_loop_in_background()
+    try:
+        bindings = ToolBindings(
+            db=db,
+            github=github,
+            repo=_stub_repo(),
+            issue=IssueInfo(
+                repo="octo/widget",
+                number=42,
+                title="t",
+                body="",
+                state="open",
+                author="alice",
+                labels=(),
+                is_pull_request=False,
+            ),
+            workspace=ws,
+            loop=loop,
+            author_name="robomp-bot",
+            author_email="robomp-bot@example.invalid",
+        )
+        db.upsert_issue(
+            key=bindings.issue_key,
+            repo="octo/widget",
+            number=42,
+            state="reproducing",
+            branch=ws.branch,
+            session_dir=str(ws.session_dir),
+        )
+        tool = next(x for x in build(bindings) if x.name == "gh_open_pr")
+        body = "## Repro\nrepro\n\n## Cause\ncause\n\n## Fix\nfix\n\n## Verification\nran tests\n\nFixes #42\n"
+        result = tool.execute({"title": "fix: x", "body": body}, _ctx())
+    finally:
+        _stop_loop(loop, thread)
+
+    assert not fix_calls.exists()
+    assert check_calls.read_text() == "called"
+    assert "opened #7" in result

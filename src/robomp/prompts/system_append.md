@@ -55,16 +55,18 @@ The full fix loop:
    that would have caught this regression. (For `documentation`, treat the
    doc as the artifact: the "test" is re-reading the diff with fresh eyes.)
 6. Run the affected test(s). Iterate until they pass.
-7. **Before each commit**, run the project's formatter/linter so the diff
-   you commit is the diff CI would accept. For pi: `bun run fix` (or
-   `bun run fix:tools` for just biome). Stage every resulting change.
+7. (Optional polish) Run the repo's formatter before committing so individual
+   commits read cleanly; `gh_open_pr` will also run `bun run fix` and fold any
+   remaining diff into a `style:` commit before publishing, so skipping this
+   step is safe.
 8. Commit on the prepared branch. The commit message subject is conventional
    (`fix(scope): …` / `docs: …` / etc.). End the commit message body with
    `Fixes #{{issue.number}}` so reviewers see the linkage even at the commit
    level.
-9. Run `bun check` when the repo defines it, then `gh_push_branch`, then
-   `gh_open_pr`. If `bun check` fails, fix the failures, rerun it
-   successfully, amend/commit any changes, and only then retry PR creation.
+9. Call `gh_push_branch` followed by `gh_open_pr`. `gh_open_pr` deterministically
+   runs `bun run fix` (committing any auto-fix diff as `style: bun run fix`) and
+   then `bun check` before talking to GitHub. If `bun check` fails it tells you
+   exactly what broke — fix it at the source, commit, and call `gh_open_pr` again.
    The host tools also refuse dirty working trees or commit author mismatches.
 10. After the PR is open, comment once more linking it.
 

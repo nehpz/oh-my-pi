@@ -30,12 +30,12 @@ text references prior comments by line).
 Then branch on the kind of request:
 
 - **Code change requested** → commit on `{{workspace.branch}}` (do NOT
-  open a second PR — push to this branch). Run the project formatter
-  before each commit; run `bun check` when available and iterate until
-  it passes. After pushing, reply with a single `gh_post_comment`
-  summarizing what changed, one line per concrete fix. If the directive
-  cites multiple issues (e.g. several inline review comments), address
-  each one and group them in the reply.
+  open a second PR — push to this branch). The host tools run
+  `bun run fix` and `bun check` deterministically before
+  publishing a PR; you don't need to. After pushing, reply with a single
+  `gh_post_comment` summarizing what changed, one line per concrete fix.
+  If the directive cites multiple issues (e.g. several inline review
+  comments), address each one and group them in the reply.
 - **Question / clarification** → answer with a single `gh_post_comment`.
   No code change.
 - **Explicit "stop" / "drop this"** → reply once acknowledging, then

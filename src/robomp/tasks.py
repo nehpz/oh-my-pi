@@ -58,7 +58,11 @@ def _directive_from_payload(payload: Mapping[str, Any]) -> DirectiveInfo | None:
 
 
 async def _fetch_thread(
-    github: GitHubClient, repo: str, number: int, *, is_pr: bool,
+    github: GitHubClient,
+    repo: str,
+    number: int,
+    *,
+    is_pr: bool,
 ) -> tuple[ThreadMessage, ...]:
     """Pull the full conversation thread (body + comments + reviews) for `number`.
 
@@ -72,22 +76,28 @@ async def _fetch_thread(
     try:
         item = await github.get_issue(repo, number)
         if item.body and item.body.strip():
-            messages.append(ThreadMessage(
-                kind="pr_body" if is_pr else "issue_body",
-                author=item.author or "",
-                body=item.body,
-                created_at="",  # not exposed by IssueInfo
-            ))
+            messages.append(
+                ThreadMessage(
+                    kind="pr_body" if is_pr else "issue_body",
+                    author=item.author or "",
+                    body=item.body,
+                    created_at="",  # not exposed by IssueInfo
+                )
+            )
     except GitHubError as exc:
         log.warning("thread body fetch failed", extra={"repo": repo, "n": number, "err": str(exc)})
 
     # 2. Conversation comments (issue OR PR conversation).
     try:
         for c in await github.list_comments(repo, number):
-            messages.append(ThreadMessage(
-                kind="comment", author=c.author, body=c.body,
-                created_at=c.created_at,
-            ))
+            messages.append(
+                ThreadMessage(
+                    kind="comment",
+                    author=c.author,
+                    body=c.body,
+                    created_at=c.created_at,
+                )
+            )
     except GitHubError as exc:
         log.warning("thread comments fetch failed", extra={"err": str(exc)})
 
@@ -95,19 +105,30 @@ async def _fetch_thread(
         # 3. Inline review comments (attached to a path:line).
         try:
             for r in await github.list_review_comments(repo, number):
-                messages.append(ThreadMessage(
-                    kind="review_comment", author=r.author, body=r.body,
-                    created_at=r.created_at, path=r.path, line=r.line,
-                ))
+                messages.append(
+                    ThreadMessage(
+                        kind="review_comment",
+                        author=r.author,
+                        body=r.body,
+                        created_at=r.created_at,
+                        path=r.path,
+                        line=r.line,
+                    )
+                )
         except GitHubError as exc:
             log.warning("thread review-comments fetch failed", extra={"err": str(exc)})
         # 4. Top-level reviews (summaries).
         try:
             for rv in await github.list_pr_reviews(repo, number):
-                messages.append(ThreadMessage(
-                    kind="review", author=rv.author, body=rv.body,
-                    created_at=rv.submitted_at, state=rv.state,
-                ))
+                messages.append(
+                    ThreadMessage(
+                        kind="review",
+                        author=rv.author,
+                        body=rv.body,
+                        created_at=rv.submitted_at,
+                        state=rv.state,
+                    )
+                )
         except GitHubError as exc:
             log.warning("thread reviews fetch failed", extra={"err": str(exc)})
 

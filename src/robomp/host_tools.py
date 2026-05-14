@@ -24,9 +24,12 @@ from robomp.github_client import GitHubClient, GitHubError, IssueInfo, RepoInfo
 from robomp.sandbox import Workspace
 
 log = logging.getLogger(__name__)
+_PRE_PR_FIX_COMMAND = ("bun", "run", "fix")
 _PRE_PR_CHECK_COMMAND = ("bun", "check")
+_PRE_PR_FIX_TIMEOUT_SECONDS = 600.0
 _PRE_PR_CHECK_TIMEOUT_SECONDS = 600.0
 _PRE_PR_CHECK_MAX_OUTPUT = 12_000
+_PRE_PR_FIX_COMMIT_SUBJECT = "style: bun run fix"
 
 
 @dataclass(slots=True, frozen=True)
@@ -69,20 +72,24 @@ def _raise_command(message: str) -> NoReturn:
     raise RpcCommandError(message, error={"message": message})
 
 
-def _has_bun_check_script(repo_dir: Path) -> bool:
+def _has_bun_script(repo_dir: Path, name: str) -> bool:
+    """Return True iff `package.json` defines a `scripts.<name>` entry.
+
+    A malformed or unreadable `package.json` is treated as "present" so the
+    repository-native error surfaces from `bun` instead of being silently
+    swallowed here.
+    """
     package_json = repo_dir / "package.json"
     if not package_json.is_file():
         return False
     try:
         package = json.loads(package_json.read_text(encoding="utf-8"))
     except (OSError, json.JSONDecodeError):
-        # If package.json exists but cannot be parsed, let `bun check` surface
-        # the repository-native error instead of silently skipping the gate.
         return True
     if not isinstance(package, Mapping):
         return True
     scripts = package.get("scripts")
-    return isinstance(scripts, Mapping) and isinstance(scripts.get("check"), str)
+    return isinstance(scripts, Mapping) and isinstance(scripts.get(name), str)
 
 
 def _format_process_output(stdout: Any, stderr: Any) -> str:
@@ -109,8 +116,98 @@ def _format_process_output(stdout: Any, stderr: Any) -> str:
     )
 
 
+def _run_pre_pr_bun_fix(bindings: ToolBindings, args: Mapping[str, Any]) -> None:
+    """Run `bun run fix` then commit any working-tree diff as the bot.
+
+    Silently no-ops when the repository does not define a `scripts.fix`
+    entry. Anything the formatter touches gets folded into a fresh
+    `style: bun run fix` commit so the downstream cleanliness gate sees a
+    pristine worktree.
+    """
+    if not _has_bun_script(bindings.workspace.repo_dir, "fix"):
+        return
+    repo_dir = str(bindings.workspace.repo_dir)
+    try:
+        proc = subprocess.run(
+            _PRE_PR_FIX_COMMAND,
+            cwd=repo_dir,
+            check=False,
+            capture_output=True,
+            text=True,
+            timeout=_PRE_PR_FIX_TIMEOUT_SECONDS,
+        )
+    except FileNotFoundError:
+        msg = "refusing to open PR: `bun run fix` is required before PR creation, but `bun` is not on PATH."
+        _audit(bindings, "gh_open_pr", args, error=msg)
+        _raise_command(msg)
+    except subprocess.TimeoutExpired as exc:
+        output = _format_process_output(exc.stdout, exc.stderr)
+        msg = (
+            "refusing to open PR: `bun run fix` timed out before PR creation.\n"
+            f"{output}\n\n"
+            "Investigate the hang, rerun the formatter, commit any resulting changes, "
+            "and retry `gh_open_pr`."
+        )
+        _audit(bindings, "gh_open_pr", args, error=msg)
+        _raise_command(msg)
+    if proc.returncode != 0:
+        output = _format_process_output(proc.stdout, proc.stderr)
+        msg = (
+            f"refusing to open PR: `bun run fix` failed before PR creation (exit {proc.returncode}).\n"
+            f"{output}\n\n"
+            "Resolve the formatter failure, rerun `bun run fix` successfully, commit any "
+            "resulting changes, and retry `gh_open_pr`."
+        )
+        _audit(bindings, "gh_open_pr", args, error=msg)
+        _raise_command(msg)
+
+    status = subprocess.run(
+        ["git", "status", "--porcelain", "--untracked-files=normal"],
+        cwd=repo_dir,
+        check=False,
+        capture_output=True,
+        text=True,
+    )
+    if not status.stdout.strip():
+        return
+
+    add = subprocess.run(
+        ["git", "add", "-A"],
+        cwd=repo_dir,
+        check=False,
+        capture_output=True,
+        text=True,
+    )
+    if add.returncode != 0:
+        err = (add.stderr or add.stdout).strip()
+        msg = f"refusing to open PR: `git add -A` failed after `bun run fix`: {err}"
+        _audit(bindings, "gh_open_pr", args, error=msg)
+        _raise_command(msg)
+    commit = subprocess.run(
+        [
+            "git",
+            "-c",
+            f"user.email={bindings.author_email}",
+            "-c",
+            f"user.name={bindings.author_name}",
+            "commit",
+            "-m",
+            _PRE_PR_FIX_COMMIT_SUBJECT,
+        ],
+        cwd=repo_dir,
+        check=False,
+        capture_output=True,
+        text=True,
+    )
+    if commit.returncode != 0:
+        err = (commit.stderr or commit.stdout).strip()
+        msg = f"refusing to open PR: failed to commit `bun run fix` changes: {err}"
+        _audit(bindings, "gh_open_pr", args, error=msg)
+        _raise_command(msg)
+
+
 def _run_pre_pr_bun_check(bindings: ToolBindings, args: Mapping[str, Any]) -> None:
-    if not _has_bun_check_script(bindings.workspace.repo_dir):
+    if not _has_bun_script(bindings.workspace.repo_dir, "check"):
         return
     try:
         proc = subprocess.run(
@@ -346,6 +443,7 @@ def _build_open_pr(bindings: ToolBindings) -> HostTool[Any, Any]:
                 "GitHub auto-closes the issue when the PR merges. Put it at the end of the "
                 "Verification section per the template."
             )
+        _run_pre_pr_bun_fix(bindings, args)
         _run_pre_pr_bun_check(bindings, args)
         # Make sure the branch is pushed (idempotent) using the same preflight as gh_push_branch.
         _guarded_push_branch(bindings, args, "gh_open_pr", bindings.workspace.branch)

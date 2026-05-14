@@ -14,7 +14,7 @@ from fastapi.responses import HTMLResponse, JSONResponse
 
 from robomp import github_events
 from robomp.config import Settings, get_settings
-from robomp.dashboard import INDEX_HTML, tail_jsonl
+from robomp.dashboard import render_index, tail_jsonl
 from robomp.db import (
     INACTIVE_EVENT_STATES,
     Database,
@@ -374,6 +374,39 @@ def create_app(settings: Settings | None = None) -> FastAPI:
             status_code=202,
         )
 
+    @app.post("/api/cancel")
+    async def api_cancel(
+        request: Request,
+        payload: dict[str, Any] = Body(...),
+        x_robomp_token: str | None = Header(None, alias="X-Robomp-Replay-Token"),
+    ) -> JSONResponse:
+        """Stop a running event. The omp subprocess is killed; the row lands in
+        `failed` with `cancelled by operator` as the error.
+        """
+        bag = request.app.state.bag
+        cfg: Settings = bag["settings"]
+        _require_trigger_token(cfg, x_robomp_token)
+
+        delivery_id = payload.get("delivery_id")
+        if not isinstance(delivery_id, str) or not delivery_id:
+            raise HTTPException(400, "cancel requires 'delivery_id'")
+
+        db: Database = bag["db"]
+        event = db.get_event(delivery_id)
+        if event is None:
+            raise HTTPException(404, f"unknown delivery {delivery_id}")
+
+        pool: WorkerPool = bag["pool"]
+        fired = await pool.cancel_event(delivery_id)
+        log.info(
+            "manual cancel",
+            extra={"delivery": delivery_id, "fired": fired, "state": event.state},
+        )
+        return JSONResponse(
+            {"delivery": delivery_id, "fired": fired, "previous_state": event.state},
+            status_code=202,
+        )
+
     @app.get("/events")
     async def events(request: Request, limit: int = 50) -> dict[str, Any]:
         rows = request.app.state.bag["db"].list_events(limit=limit)
@@ -413,8 +446,10 @@ def create_app(settings: Settings | None = None) -> FastAPI:
         }
 
     @app.get("/", response_class=HTMLResponse)
-    async def index() -> HTMLResponse:
-        return HTMLResponse(INDEX_HTML)
+    async def index(request: Request) -> HTMLResponse:
+        cfg: Settings = request.app.state.bag["settings"]
+        token = cfg.replay_token.get_secret_value() if cfg.replay_token else None
+        return HTMLResponse(render_index(token))
 
     @app.get("/api/status")
     async def api_status(request: Request) -> dict[str, Any]:

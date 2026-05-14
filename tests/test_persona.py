@@ -52,10 +52,21 @@ def test_render_thread_orders_kinds_with_appropriate_headers() -> None:
     thread = (
         ThreadMessage(kind="issue_body", author="alice", body="orig report", created_at=""),
         ThreadMessage(kind="comment", author="bob", body="me too", created_at="2026-05-01T10:00:00Z"),
-        ThreadMessage(kind="review_comment", author="codex", body="leak here",
-                      created_at="2026-05-02T10:00:00Z", path="src/foo.py", line=42),
-        ThreadMessage(kind="review", author="codex", body="two issues",
-                      created_at="2026-05-02T10:01:00Z", state="CHANGES_REQUESTED"),
+        ThreadMessage(
+            kind="review_comment",
+            author="codex",
+            body="leak here",
+            created_at="2026-05-02T10:00:00Z",
+            path="src/foo.py",
+            line=42,
+        ),
+        ThreadMessage(
+            kind="review",
+            author="codex",
+            body="two issues",
+            created_at="2026-05-02T10:01:00Z",
+            state="CHANGES_REQUESTED",
+        ),
     )
     out = persona._render_thread(thread)
     # Issue body header (no timestamp).
@@ -74,11 +85,12 @@ def test_render_thread_orders_kinds_with_appropriate_headers() -> None:
 
 def test_directive_prompt_embeds_thread_and_directive_body() -> None:
     thread = (
-        ThreadMessage(kind="comment", author="alice", body="follow up please",
-                      created_at="2026-05-01T10:00:00Z"),
+        ThreadMessage(kind="comment", author="alice", body="follow up please", created_at="2026-05-01T10:00:00Z"),
     )
     out = persona.directive(
-        repo=_Repo(), issue=_Issue(), comment=_Comment(),
+        repo=_Repo(),
+        issue=_Issue(),
+        comment=_Comment(),
         workspace=_Workspace(),
         directive=DirectiveInfo(body="apply fix Y", author="can1357", thread=thread),
         pr_status="PR #1080 is open",
@@ -91,11 +103,11 @@ def test_directive_prompt_embeds_thread_and_directive_body() -> None:
 
 
 def test_kickoff_directive_prompt_embeds_thread_and_classify_instruction() -> None:
-    thread = (
-        ThreadMessage(kind="issue_body", author="alice", body="failing on macos", created_at=""),
-    )
+    thread = (ThreadMessage(kind="issue_body", author="alice", body="failing on macos", created_at=""),)
     out = persona.kickoff_directive(
-        repo=_Repo(), issue=_Issue(), workspace=_Workspace(),
+        repo=_Repo(),
+        issue=_Issue(),
+        workspace=_Workspace(),
         directive=DirectiveInfo(body="reproduce + fix", author="can1357", thread=thread),
     )
     assert "Maintainer directive on octo/widget#1080" in out

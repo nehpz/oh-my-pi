@@ -39,11 +39,12 @@ example, if you classify as `enhancement` you would normally wait for an
    answer — the labels are how everyone else sees the triage.
 
 2. **Execute the directive** in the same session, on this worktree:
-   - Code change → commit on `{{workspace.branch}}`, run the project formatter
-     before each commit, run `bun check` when available and iterate until it
-     passes, `gh_push_branch`, `gh_open_pr` with the standard `## Repro /
-     ## Cause / ## Fix / ## Verification` body. Reply with a single
-     `gh_post_comment` linking the PR.
+   - Code change → commit on `{{workspace.branch}}`, `gh_push_branch`,
+     `gh_open_pr` with the standard `## Repro / ## Cause / ## Fix /
+     ## Verification` body. `gh_open_pr` deterministically runs
+     `bun run fix` then `bun check` against the worktree before talking
+     to GitHub — if `bun check` fails, fix the cause and call again.
+     Reply with a single `gh_post_comment` linking the PR.
    - Question / clarification → one `gh_post_comment` answering it. No
      branch, no PR.
    - Explicit "stop" / "ignore" → one `gh_post_comment` acknowledging,
