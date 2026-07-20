@@ -5,7 +5,7 @@ import * as path from "node:path";
 import { create, fromBinary } from "@bufbuild/protobuf";
 import type { AgentEvent, AgentTool, AgentToolContext } from "@oh-my-pi/pi-agent-core";
 import { type BlockState, handleServerMessage, type ToolCallState } from "@oh-my-pi/pi-ai/providers/cursor";
-import type { AssistantMessage } from "@oh-my-pi/pi-ai/types";
+import type { AssistantMessage, CursorExecRejection, ToolResultMessage } from "@oh-my-pi/pi-ai/types";
 import { AssistantMessageEventStream } from "@oh-my-pi/pi-ai/utils/event-stream";
 import {
 	AgentClientMessageSchema,
@@ -36,6 +36,12 @@ function createTestSession(cwd: string, overrides: Partial<ToolSession> = {}): T
 	};
 }
 
+/** Narrow a bridge handler result to a tool result; rejections fail the test. */
+function asToolResult(value: ToolResultMessage | CursorExecRejection): ToolResultMessage {
+	if ("rejected" in value) throw new Error(`Expected tool result, got rejection: ${value.rejected}`);
+	return value;
+}
+
 describe("CursorExecHandlers.grep bridge", () => {
 	let cwd: string;
 	let searchTool: GrepTool;
@@ -57,30 +63,75 @@ describe("CursorExecHandlers.grep bridge", () => {
 
 	it("maps caseInsensitive parameter correctly through the grep bridge", async () => {
 		// 1. By default/omitted caseInsensitive, should be case-sensitive (match count 1 for "hello")
-		const defaultResult = await handlers.grep({
-			toolCallId: "call-1",
-			path: cwd,
-			pattern: "hello",
-		} as any);
+		const defaultResult = asToolResult(
+			await handlers.grep({
+				toolCallId: "call-1",
+				path: cwd,
+				pattern: "hello",
+			} as any),
+		);
 		expect((defaultResult.details as { matchCount?: number } | undefined)?.matchCount).toBe(1);
 
 		// 2. If caseInsensitive: true, should be case-insensitive (match count 2 for "hello")
-		const insensitiveResult = await handlers.grep({
-			toolCallId: "call-2",
-			path: cwd,
-			pattern: "hello",
-			caseInsensitive: true,
-		} as any);
+		const insensitiveResult = asToolResult(
+			await handlers.grep({
+				toolCallId: "call-2",
+				path: cwd,
+				pattern: "hello",
+				caseInsensitive: true,
+			} as any),
+		);
 		expect((insensitiveResult.details as { matchCount?: number } | undefined)?.matchCount).toBe(2);
 
 		// 3. If caseInsensitive: false, should be case-sensitive (match count 1 for "hello")
-		const sensitiveResult = await handlers.grep({
-			toolCallId: "call-3",
-			path: cwd,
-			pattern: "hello",
-			caseInsensitive: false,
-		} as any);
+		const sensitiveResult = asToolResult(
+			await handlers.grep({
+				toolCallId: "call-3",
+				path: cwd,
+				pattern: "hello",
+				caseInsensitive: false,
+			} as any),
+		);
 		expect((sensitiveResult.details as { matchCount?: number } | undefined)?.matchCount).toBe(1);
+	});
+});
+
+// Cursor's server advertises native tools (shell/grep/…) unconditionally, so a
+// restricted subagent (e.g. a read-only scout without `bash`) can still receive
+// the call. The bridge must answer with a policy rejection — not an error — so
+// the model treats it as declined instead of a broken environment and stops
+// retrying (composer-2.5 retry-spiral).
+describe("CursorExecHandlers ungranted native tools", () => {
+	it("rejects shell when bash is not granted, naming the granted tools", async () => {
+		const handlers = new CursorExecHandlers({
+			cwd: ".",
+			tools: new Map([
+				["read", { name: "read" } as AgentTool],
+				["grep", { name: "grep" } as AgentTool],
+			]),
+		});
+
+		const result = await handlers.shell(create(ShellArgsSchema, { toolCallId: "call-shell", command: "echo hi" }));
+
+		if (!("rejected" in result)) throw new Error("expected policy rejection");
+		expect(result.rejected).toContain('Tool "bash" is not granted');
+		expect(result.rejected).toContain("policy restriction");
+		expect(result.rejected).toContain("grep, read");
+		expect(result.toolResult?.isError).toBe(true);
+		expect(result.toolResult?.toolName).toBe("bash");
+		expect(result.toolResult?.toolCallId).toBe("call-shell");
+	});
+
+	it("rejects shellStream when bash is not granted", async () => {
+		const handlers = new CursorExecHandlers({ cwd: ".", tools: new Map() });
+
+		const result = await handlers.shellStream(
+			create(ShellArgsSchema, { toolCallId: "call-stream", command: "echo hi" }),
+			{ onStdout: () => {}, onStderr: () => {} },
+		);
+
+		if (!("rejected" in result)) throw new Error("expected policy rejection");
+		expect(result.rejected).toContain('Tool "bash" is not granted');
 	});
 });
 
@@ -105,7 +156,9 @@ describe("CursorExecHandlers error results", () => {
 			emitEvent: event => events.push(event),
 		});
 
-		const result = await handlers.read(create(ReadArgsSchema, { toolCallId: "call-read", path: "ignored" }));
+		const result = asToolResult(
+			await handlers.read(create(ReadArgsSchema, { toolCallId: "call-read", path: "ignored" })),
+		);
 		expect(result.isError).toBe(true);
 		expect(result.content).toEqual([{ type: "text", text: "Enriched recovery guidance" }]);
 		const end = events.find(event => event.type === "tool_execution_end");
@@ -121,12 +174,11 @@ describe("CursorExecHandlers error results", () => {
 			emitEvent: event => events.push(event),
 		});
 
-		const result = await handlers.shellStream(
-			create(ShellArgsSchema, { toolCallId: "call-shell", command: "ignored" }),
-			{
+		const result = asToolResult(
+			await handlers.shellStream(create(ShellArgsSchema, { toolCallId: "call-shell", command: "ignored" }), {
 				onStdout: data => stdout.push(data),
 				onStderr: () => {},
-			},
+			}),
 		);
 		expect(result.isError).toBe(true);
 		expect(result.content).toEqual([{ type: "text", text: "Enriched recovery guidance" }]);
@@ -153,14 +205,16 @@ describe("CursorExecHandlers mounted tool bridge", () => {
 			getTool: name => (name === mountedTool.name ? mountedTool : undefined),
 		});
 
-		const result = await handlers.mcp({
-			name: mountedTool.name,
-			providerIdentifier: "pi-agent",
-			toolName: mountedTool.name,
-			toolCallId: "call-mounted",
-			args: {},
-			rawArgs: {},
-		});
+		const result = asToolResult(
+			await handlers.mcp({
+				name: mountedTool.name,
+				providerIdentifier: "pi-agent",
+				toolName: mountedTool.name,
+				toolCallId: "call-mounted",
+				args: {},
+				rawArgs: {},
+			}),
+		);
 
 		expect(result.isError).toBe(false);
 		expect(result.content).toEqual([{ type: "text", text: "reported" }]);
@@ -189,14 +243,16 @@ describe("CursorExecHandlers mounted tool bridge", () => {
 			getToolContext: () => ({ settings }) as AgentToolContext,
 		});
 
-		const result = await handlers.mcp({
-			name: device.name,
-			providerIdentifier: "pi-agent",
-			toolName: device.name,
-			toolCallId: "call-denied",
-			args: {},
-			rawArgs: {},
-		});
+		const result = asToolResult(
+			await handlers.mcp({
+				name: device.name,
+				providerIdentifier: "pi-agent",
+				toolName: device.name,
+				toolCallId: "call-denied",
+				args: {},
+				rawArgs: {},
+			}),
+		);
 
 		expect(result.isError).toBe(true);
 		expect(executed).toBe(false);
@@ -382,8 +438,9 @@ describe("CursorExecHandlers native delete gating (issue #5680)", () => {
 
 		const result = await handlers.delete(create(DeleteArgsSchema, { toolCallId: "call-del", path: target }));
 
-		expect(result.isError).toBe(true);
-		expect(result.content).toEqual([{ type: "text", text: 'Tool "delete" not available' }]);
+		if (!("rejected" in result)) throw new Error("expected policy rejection");
+		expect(result.rejected).toContain("not permitted");
+		expect(result.toolResult?.isError).toBe(true);
 		expect(await Bun.file(target).exists()).toBe(true);
 	});
 
@@ -396,7 +453,9 @@ describe("CursorExecHandlers native delete gating (issue #5680)", () => {
 			allowNativeDelete: true,
 		});
 
-		const result = await handlers.delete(create(DeleteArgsSchema, { toolCallId: "call-del", path: target }));
+		const result = asToolResult(
+			await handlers.delete(create(DeleteArgsSchema, { toolCallId: "call-del", path: target })),
+		);
 
 		expect(result.isError).toBe(false);
 		expect(await Bun.file(target).exists()).toBe(false);
@@ -418,7 +477,9 @@ describe("CursorExecHandlers native delete gating (issue #5680)", () => {
 		});
 
 		currentCwd = movedCwd;
-		const result = await handlers.delete(create(DeleteArgsSchema, { toolCallId: "call-del", path: "obsolete.txt" }));
+		const result = asToolResult(
+			await handlers.delete(create(DeleteArgsSchema, { toolCallId: "call-del", path: "obsolete.txt" })),
+		);
 
 		expect(result.isError).toBe(false);
 		expect(await Bun.file(originalTarget).exists()).toBe(true);

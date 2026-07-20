@@ -157,6 +157,37 @@ describe("Cursor resolveExecHandler execHandlers binding", () => {
 		// Should get error result (handler threw accessing undefined.sentinel)
 		expect(execResult).toEqual({ tag: "error", message: expect.any(String) });
 	});
+
+	it("maps a handler rejection to the buildRejected variant and records the toolResult", async () => {
+		const rejectionToolResult: ToolResultMessage = {
+			role: "toolResult",
+			toolCallId: "call-1",
+			toolName: "bash",
+			content: [{ type: "text", text: "not granted" }],
+			isError: true,
+			timestamp: Date.now(),
+		};
+		const recorded: ToolResultMessage[] = [];
+
+		const { execResult, toolResult } = await resolveExecHandler<
+			{ command: string },
+			{ tag: string; reason?: string }
+		>(
+			{ command: "echo hi" },
+			async () => ({ rejected: "Tool not granted to this agent", toolResult: rejectionToolResult }),
+			result => {
+				recorded.push(result);
+				return result;
+			},
+			() => ({ tag: "from-tool-result" }),
+			(reason: string) => ({ tag: "rejected", reason }),
+			() => ({ tag: "error" }),
+		);
+
+		expect(execResult).toEqual({ tag: "rejected", reason: "Tool not granted to this agent" });
+		expect(toolResult).toBe(rejectionToolResult);
+		expect(recorded).toEqual([rejectionToolResult]);
+	});
 });
 
 describe("Cursor system prompt encoding", () => {

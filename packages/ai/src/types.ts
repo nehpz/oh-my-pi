@@ -870,7 +870,19 @@ export interface ToolResultMessage<TDetails = unknown> {
 
 export type Message = UserMessage | DeveloperMessage | AssistantMessage | ToolResultMessage;
 
-export type CursorExecHandlerResult<T> = { result: T; toolResult?: ToolResultMessage } | T | ToolResultMessage;
+export type CursorExecHandlerResult<T> =
+	| { result: T; toolResult?: ToolResultMessage }
+	| T
+	| ToolResultMessage
+	| CursorExecRejection;
+
+/**
+ * Policy rejection returned by an exec handler: the call is answered with the
+ * protocol-level `rejected` variant (e.g. `ShellRejected`) instead of an error
+ * result, so Cursor models treat it as a declined action rather than a broken
+ * environment. `toolResult` is still recorded in the transcript when provided.
+ */
+export type CursorExecRejection = { rejected: string; toolResult?: ToolResultMessage };
 
 export type CursorToolResultHandler = (
 	result: ToolResultMessage,
