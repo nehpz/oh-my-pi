@@ -63,7 +63,7 @@ export interface AuthGatewayBootOptions extends AuthGatewayServerOptions {
 	 * dependency in `pi-ai`).
 	 */
 	resolveModel: ModelResolver;
-	/** Optional supplier for `/v1/models` listing. Returns the full model array. */
+	/** Optional supplier for `/v1/models` listing. Must yield each model exactly once — not a lookup map's `.values()`, which may alias one model under multiple keys. */
 	listModels?: () => Iterable<Model<Api>>;
 }
 
@@ -732,7 +732,14 @@ async function handleCredentialsCheck(storage: AuthStorage, signal: AbortSignal)
 
 function handleModelsList(opts: AuthGatewayBootOptions): Response {
 	const seen = new Set<string>();
-	const data: Array<{ id: string; object: "model"; owned_by: string; api: Api }> = [];
+	const data: Array<{
+		id: string;
+		object: "model";
+		owned_by: string;
+		api: Api;
+		context_length: number | null;
+		max_tokens: number | null;
+	}> = [];
 	for (const model of opts.listModels?.() ?? []) {
 		const id = `${model.provider}/${model.id}`;
 		if (seen.has(id)) continue;
@@ -742,6 +749,14 @@ function handleModelsList(opts: AuthGatewayBootOptions): Response {
 			object: "model",
 			owned_by: model.provider,
 			api: model.api,
+			// Extension fields, not part of the OpenAI `/v1/models` shape: most
+			// OpenAI-compatible proxies (OpenRouter, vLLM, LiteLLM) attach one of
+			// these so catalog-driven clients don't have to hardcode limits.
+			// `context_length` matches the fallback name our own generic
+			// `openai-models-list` discovery client checks (see
+			// `packages/coding-agent/src/config/model-discovery.ts`).
+			context_length: model.contextWindow,
+			max_tokens: model.maxTokens,
 		});
 	}
 	return json(200, { object: "list", data });

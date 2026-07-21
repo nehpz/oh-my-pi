@@ -140,6 +140,45 @@ async function fetchBrokerSnapshot(client: AuthBrokerClient): Promise<SnapshotRe
 	return result.snapshot;
 }
 
+export interface AuthGatewayModelCatalog {
+	/** Lookup structure for `resolveModel`: each model aliased under its qualified `provider/id` key (always) and its bare `id` key (first-write-wins, for legacy clients). */
+	modelById: Map<string, Model<Api>>;
+	/** Enumeration list for `listModels` / `/v1/models` — exactly one entry per model. */
+	models: Model<Api>[];
+}
+
+/**
+ * Build the model resolver + `/v1/models` catalog for `omp auth-gateway
+ * serve`, scoped to providers we hold credentials for.
+ *
+ * `modelById` and `models` are deliberately separate: `modelById` aliases
+ * each model under two keys (qualified + bare id) so `resolveModel` can
+ * address it either way, while `models` holds exactly one entry per model
+ * for enumeration. Do not enumerate `modelById.values()` for `/v1/models` —
+ * a model aliased under two keys yields two values from the same map,
+ * doubling almost every entry (the regression this split fixes).
+ */
+export function buildAuthGatewayModelCatalog(
+	providersWithCreds: ReadonlySet<string>,
+	options?: { providers?: readonly string[]; getModels?: (provider: string) => readonly Model<Api>[] },
+): AuthGatewayModelCatalog {
+	const providers = options?.providers ?? getBundledProviders();
+	const getModels = options?.getModels ?? ((provider: string) => getBundledModels(provider as GeneratedProvider));
+	const modelById = new Map<string, Model<Api>>();
+	const models: Model<Api>[] = [];
+	for (const provider of providers) {
+		if (!providersWithCreds.has(provider)) continue;
+		for (const model of getModels(provider)) {
+			// Always set the qualified key (no collision possible)
+			modelById.set(`${model.provider}/${model.id}`, model);
+			// Bare id as fallback for legacy clients (first-write-wins)
+			if (!modelById.has(model.id)) modelById.set(model.id, model);
+			models.push(model);
+		}
+	}
+	return { modelById, models };
+}
+
 async function runServe(flags: AuthGatewayCommandArgs["flags"]): Promise<void> {
 	const brokerConfig = await resolveAuthBrokerConfig();
 	if (!brokerConfig) {
@@ -176,16 +215,7 @@ async function runServe(flags: AuthGatewayCommandArgs["flags"]): Promise<void> {
 	const snapshot = storage.exportSnapshot();
 	const providersWithCreds = new Set<string>();
 	for (const entry of snapshot.credentials) providersWithCreds.add(entry.provider);
-	const modelById = new Map<string, Model<Api>>();
-	for (const provider of getBundledProviders()) {
-		if (!providersWithCreds.has(provider)) continue;
-		for (const model of getBundledModels(provider as GeneratedProvider)) {
-			// Always set the qualified key (no collision possible)
-			modelById.set(`${model.provider}/${model.id}`, model);
-			// Bare id as fallback for legacy clients (first-write-wins)
-			if (!modelById.has(model.id)) modelById.set(model.id, model);
-		}
-	}
+	const { modelById, models } = buildAuthGatewayModelCatalog(providersWithCreds);
 
 	const handle = startAuthGateway({
 		storage,
@@ -193,7 +223,7 @@ async function runServe(flags: AuthGatewayCommandArgs["flags"]): Promise<void> {
 		bearerTokens: gatewayToken ? [gatewayToken] : [],
 		version: VERSION,
 		resolveModel: (id: string) => modelById.get(id),
-		listModels: () => modelById.values(),
+		listModels: () => models,
 	});
 	process.stdout.write(`auth-gateway listening on ${handle.url}\n`);
 	if (gatewayToken) {
