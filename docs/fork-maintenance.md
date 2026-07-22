@@ -75,3 +75,10 @@ For any future local change:
 ## Sync log
 
 <!-- Appended by scripts/sync-upstream.ts; newest first. -->
+
+### 2026-07-22 — v17.0.6 → v17.0.7
+
+- kept 5a6ec1bb3 feat(ai): introduce policy rejections for exec handlers
+- kept ae1db605e fix(ai,coding-agent): stop doubling /v1/models entries, add context window fields
+- kept 50c843278 chore(dev): add local config example and gitignore entries
+- kept 658659ce6 chore(fork): add upstream sync process (runbook + sync-upstream script)
