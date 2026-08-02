@@ -31,7 +31,7 @@ import {
 	type SnapshotResponse,
 } from "@oh-my-pi/pi-ai/auth-broker";
 import { DEFAULT_AUTH_GATEWAY_BIND, startAuthGateway } from "@oh-my-pi/pi-ai/auth-gateway";
-import { type GeneratedProvider, getBundledModels } from "@oh-my-pi/pi-catalog/models";
+import { type GeneratedProvider, getBundledModels, getBundledProviders } from "@oh-my-pi/pi-catalog/models";
 import { getConfigRootDir, isEnoent, logger, VERSION } from "@oh-my-pi/pi-utils";
 import chalk from "@oh-my-pi/pi-utils/chalk";
 import { ModelRegistry } from "../config/model-registry";
@@ -149,6 +149,13 @@ async function fetchBrokerSnapshot(client: AuthBrokerClient): Promise<SnapshotRe
  */
 const CATALOG_REFRESH_INTERVAL_MS = 15 * 60 * 1000;
 
+export interface AuthGatewayModelCatalog {
+	/** Lookup structure for `resolveModel`: each model aliased under its qualified `provider/id` key (always) and its bare `id` key (first-write-wins, for legacy clients). */
+	modelById: Map<string, Model<Api>>;
+	/** Enumeration list for `listModels` / `/v1/models` — exactly one entry per model. */
+	models: Model<Api>[];
+}
+
 /**
  * How often a long-lived `serve` polls the broker-backed store for credential
  * changes made by another process (a `login`/`logout` on the host). Kept below
@@ -213,6 +220,24 @@ export function createSerializedRebuilder(run: (force: boolean) => Promise<void>
 	return rebuild;
 }
 
+/**
+ * Build the bundled model resolver + enumeration catalog. The lookup map
+ * aliases each model under qualified and bare ids, while `models` contains
+ * each credentialed model exactly once.
+ */
+export function buildAuthGatewayModelCatalog(
+	providersWithCreds: ReadonlySet<string>,
+	options?: { providers?: readonly string[]; getModels?: (provider: string) => readonly Model<Api>[] },
+): AuthGatewayModelCatalog {
+	const providers = options?.providers ?? getBundledProviders();
+	const getModels = options?.getModels ?? ((provider: string) => getBundledModels(provider as GeneratedProvider));
+	const models: Model<Api>[] = [];
+	for (const provider of providers) {
+		if (!providersWithCreds.has(provider)) continue;
+		models.push(...getModels(provider));
+	}
+	return { modelById: indexModelsByRequestId(models, providersWithCreds), models };
+}
 async function runServe(flags: AuthGatewayCommandArgs["flags"]): Promise<void> {
 	const brokerConfig = await resolveAuthBrokerConfig();
 	if (!brokerConfig) {
@@ -264,6 +289,10 @@ async function runServe(flags: AuthGatewayCommandArgs["flags"]): Promise<void> {
 		return providers;
 	};
 	let modelById = new Map<string, Model<Api>>();
+	// `models` is the enumeration list for `/v1/models`: exactly one entry per
+	// model. `modelById` aliases each model under both its qualified and bare
+	// id, so enumerating its values would emit duplicates.
+	let models: Model<Api>[] = [];
 	// Rebuild the served catalog (a `registry.refresh()` pass, then re-index
 	// against the current credential set). Credential-triggered rebuilds force
 	// `online` discovery: an account added to or removed from an
@@ -273,7 +302,9 @@ async function runServe(flags: AuthGatewayCommandArgs["flags"]): Promise<void> {
 	// for up to a cache TTL. Periodic rebuilds stay cached.
 	const rebuildCatalog = createSerializedRebuilder(async force => {
 		await registry.refresh(force ? "online" : "online-if-uncached");
-		modelById = indexModelsByRequestId(registry.getAll(), providersWithCreds());
+		const credentialed = providersWithCreds();
+		models = registry.getAll().filter(model => credentialed.has(model.provider));
+		modelById = indexModelsByRequestId(models, credentialed);
 	});
 	await rebuildCatalog();
 
@@ -283,7 +314,7 @@ async function runServe(flags: AuthGatewayCommandArgs["flags"]): Promise<void> {
 		bearerTokens: gatewayToken ? [gatewayToken] : [],
 		version: VERSION,
 		resolveModel: (id: string) => modelById.get(id),
-		listModels: () => modelById.values(),
+		listModels: () => models,
 	});
 	process.stdout.write(`auth-gateway listening on ${handle.url}\n`);
 	if (gatewayToken) {
