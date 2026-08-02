@@ -47,6 +47,7 @@ export interface ResolveLoaderCandidatesInput {
 	addonFilenames: string[];
 	isCompiledBinary: boolean;
 	stageFromNodeModules?: boolean;
+	exclusiveNativeDir?: boolean;
 	nativeDir: string;
 	leafPackageDir?: string | null;
 	execDir: string;
@@ -61,6 +62,7 @@ export interface InitLoaderContextOverrides {
 	platform?: NodeJS.Platform | string;
 	isCompiledBinary?: boolean;
 	leafPackageDir?: string | null;
+	exclusiveNativeDir?: boolean;
 }
 
 export interface NativeLoaderContext {
@@ -71,6 +73,7 @@ export interface NativeLoaderContext {
 	versionedDir: string;
 	isCompiledBinary: boolean;
 	stageFromNodeModules: boolean;
+	exclusiveNativeDir: boolean;
 	selectedVariant: "modern" | "baseline" | null;
 	addonFilenames: string[];
 	addonLabel: string;
@@ -127,4 +130,4 @@ export function validateLoadedBindings(
 	candidate: string,
 ): void;
 
-export function loadNative(): Record<string, unknown>;
+export function loadNative(overrides?: InitLoaderContextOverrides): Record<string, unknown>;
