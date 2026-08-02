@@ -43,6 +43,7 @@ async function cursorEval(args: Record<string, unknown>): Promise<{ isError: boo
 			args,
 			rawArgs: {},
 		});
+		if ("rejected" in result) throw new Error(`Expected tool result, got rejection: ${result.rejected}`);
 		return {
 			isError: result.isError === true,
 			text: result.content
