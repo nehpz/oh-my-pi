@@ -105,12 +105,12 @@ For each candidate:
 
 1. Emit a startup marker when enabled.
 2. `require(candidate)`.
-3. Unless this is workspace development, require the expected package-version sentinel function.
+3. Require the expected package-version sentinel function.
 4. Call `__ompInstallTokioRuntime()` if the addon provides it.
 5. Best-effort remove valid semantic-version cache directories older than the current version.
 6. Return the bindings.
 
-The sentinel error distinguishes a previous addon still resident in the current process from a stale file on disk. If the loaded exports carry an older sentinel but the candidate bytes contain the expected current sentinel, the diagnostic says to restart. Otherwise it says to reinstall. The loader does not validate all public exports.
+The sentinel error distinguishes a previous addon still resident in the current process from a stale file on disk. If the loaded exports carry an older sentinel but the candidate bytes contain the expected current sentinel, the diagnostic says to restart. Otherwise it says to reinstall — or, for workspace loads, to run `bun run build:native` and restart omp. The loader does not validate all public exports.
 
 Rust module initialization installs crash diagnostics but does not spawn runtime threads under the dynamic-loader lock. The optional post-load hook installs bounded Windows Tokio and Rayon pools. It is best-effort; older addons or hook failures fall back to napi-rs behavior. Set `PI_DEBUG_STARTUP` to emit synchronous `[startup]` markers to stderr, including hook success/failure.
 
@@ -133,7 +133,7 @@ entrypoint evaluates or lazy wrapper is invoked
   -> extract matching embedded archive, if any
   -> otherwise stage Windows node_modules addon, if applicable
   -> require candidates in deterministic order
-       -> validate sentinel outside workspace development
+       -> validate sentinel
        -> install optional post-load runtime
        -> best-effort clean older version caches
        -> return bindings

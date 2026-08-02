@@ -277,6 +277,10 @@
 - Improved coordinate-frame error messages for pointer input before capture, out-of-frame coordinates, and between-display points to clearly explain the capture-frame contract and remedy instead of throwing a generic bounds check.
 - Fixed duplicated characters in AppKit targets on macOS caused by background keyboard events being posted through both CoreGraphics and SkyLight; events are now delivered once via the authenticated SkyLight route.
 
+### Fixed
+
+- Workspace loads now reject stale native addons with actionable rebuild guidance instead of exporting missing bindings as `undefined`.
+
 ## [17.2.2] - 2026-07-31
 
 ### Changed
@@ -308,6 +312,7 @@
 ### Fixed
 
 - Fixed an issue on macOS (darwin) where the native addon delivered zero AudioCapture callbacks, which prevented microphone audio from being captured.
+
 
 ## [17.1.6] - 2026-07-27
 
