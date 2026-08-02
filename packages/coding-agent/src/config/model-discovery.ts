@@ -912,6 +912,7 @@ export async function discoverOpenAIModelsList(
 						max_completion_tokens?: unknown;
 						limits?: unknown;
 						top_provider?: unknown;
+						max_tokens?: unknown;
 						input?: unknown;
 						input_modalities?: unknown;
 						output?: unknown;
@@ -1008,6 +1009,7 @@ export async function discoverOpenAIModelsList(
 				? resolveLiteLLMApi(undefined, id, providerConfig.api)
 				: providerConfig.api;
 		const contextWindow = reportedContextWindow ?? DISCOVERY_DEFAULT_CONTEXT_WINDOW;
+		const providerMaxTokens = toPositiveNumberOrUndefined(item.max_tokens);
 		specs.push({
 			id,
 			name: reference?.name ?? id,
@@ -1027,7 +1029,7 @@ export async function discoverOpenAIModelsList(
 			// the discovered context window so a larger limit can never request more
 			// tokens than the local runtime advertises.
 			maxTokens: Math.min(
-				reportedMaxTokens ?? reference?.maxTokens ?? discoveryDefaultMaxTokens(api),
+				reportedMaxTokens ?? providerMaxTokens ?? reference?.maxTokens ?? discoveryDefaultMaxTokens(api),
 				contextWindow,
 			),
 			headers,
