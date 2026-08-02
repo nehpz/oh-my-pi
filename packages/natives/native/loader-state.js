@@ -145,6 +145,7 @@ export function shouldStageNodeModulesAddon({ platform, isCompiledBinary, native
  *   addonFilenames: string[];
  *   isCompiledBinary: boolean;
  *   stageFromNodeModules?: boolean;
+ *   exclusiveNativeDir?: boolean;
  *   nativeDir: string;
  *   leafPackageDir?: string | null;
  *   execDir: string;
@@ -157,12 +158,16 @@ export function resolveLoaderCandidates({
 	addonFilenames,
 	isCompiledBinary,
 	stageFromNodeModules = false,
+	exclusiveNativeDir = false,
 	nativeDir,
 	leafPackageDir = null,
 	execDir,
 	versionedDir,
 	userDataDir,
 }) {
+	if (exclusiveNativeDir) {
+		return [...new Set(addonFilenames.map(filename => path.join(nativeDir, filename)))];
+	}
 	const baseReleaseCandidates = addonFilenames.flatMap(filename => [
 		path.join(nativeDir, filename),
 		path.join(execDir, filename),
@@ -560,6 +565,7 @@ export function extractEmbeddedAddonArchive({ archivePath, files, targetDir }) {
 }
 
 function maybeExtractEmbeddedAddon(ctx, errors) {
+	if (ctx.exclusiveNativeDir) return null;
 	if (!ctx.isCompiledBinary || !embeddedAddon) return null;
 	if (embeddedAddon.platformTag !== ctx.platformTag || embeddedAddon.version !== ctx.packageVersion) return null;
 
@@ -678,12 +684,6 @@ function isCompatiblePreSentinelNativeAddon(bindings, diskHasExpectedSentinel) {
 }
 
 export function validateLoadedBindings(ctx, bindings, candidate) {
-	// In workspace dev (running out of `packages/natives/native/` rather than a
-	// `node_modules` install or a compiled bundle) the local `.node` only gains
-	// the renamed sentinel after `bun --cwd=packages/natives run build`. Skip
-	// validation there so a stale post-pull dev tree boots while the rebuild
-	// completes; install and compiled-binary paths still validate.
-	if (ctx.isWorkspaceLoad) return;
 	if (typeof bindings[ctx.versionSentinelExport] === "function") return;
 
 	// The expected sentinel is missing. Distinguish two failure modes by the
@@ -724,7 +724,9 @@ export function validateLoadedBindings(ctx, bindings, candidate) {
 	throw new Error(
 		`Loaded ${candidate} but it does not expose the @oh-my-pi/pi-natives@${ctx.packageVersion} ` +
 			`version sentinel \`${ctx.versionSentinelExport}\`. The .node file on disk is from a different ` +
-			"release than this loader — reinstall to re-sync.",
+			(ctx.isWorkspaceLoad
+				? "release than this workspace — run `bun run build:native`, then restart omp."
+				: "release than this loader — reinstall to re-sync."),
 	);
 }
 
@@ -763,6 +765,12 @@ function buildHelpMessage(ctx) {
 			`If missing, delete ${ctx.versionedDir} and re-run, or download manually:\n${downloadHints}`
 		);
 	}
+	if (ctx.isWorkspaceLoad) {
+		return (
+			"Rebuild the workspace addon with: bun run build:native\n" +
+			"Then restart omp so the process loads the rebuilt binary."
+		);
+	}
 	return (
 		"If installed via npm/bun, try reinstalling: bun install @oh-my-pi/pi-natives\n" +
 		"If developing locally, build with: bun --cwd=packages/natives run build\n" +
@@ -777,9 +785,10 @@ function buildHelpMessage(ctx) {
  * helpers from this file doesn't trigger AVX2 detection or filesystem probes.
  */
 /**
- * @param {{ nativeDir?: string; platform?: NodeJS.Platform | string; isCompiledBinary?: boolean; leafPackageDir?: string | null }} [overrides]
+ * @param {{ nativeDir?: string; platform?: NodeJS.Platform | string; isCompiledBinary?: boolean; leafPackageDir?: string | null; exclusiveNativeDir?: boolean }} [overrides]
  */
 export function initLoaderContext(overrides = {}) {
+	const exclusiveNativeDir = overrides.exclusiveNativeDir === true;
 	const platform = overrides.platform ?? process.platform;
 	const platformTag = `${platform}-${process.arch}`;
 	const packageVersion = packageJson.version;
@@ -805,16 +814,18 @@ export function initLoaderContext(overrides = {}) {
 		!normalizedNativeDir.includes("\\node_modules\\") &&
 		!normalizedNativeDir.includes("/node_modules/");
 	const leafPackageDir =
-		isCompiledBinary || isWorkspaceLoad
+		exclusiveNativeDir || isCompiledBinary || isWorkspaceLoad
 			? null
 			: overrides.leafPackageDir === undefined
 				? resolveLeafPackageDir(platformTag)
 				: overrides.leafPackageDir;
-	const stageFromNodeModules = shouldStageNodeModulesAddon({
-		platform,
-		isCompiledBinary,
-		nativeDir: normalizedNativeDir,
-	});
+	const stageFromNodeModules =
+		!exclusiveNativeDir &&
+		shouldStageNodeModulesAddon({
+			platform,
+			isCompiledBinary,
+			nativeDir: normalizedNativeDir,
+		});
 
 	const selectedVariant = resolveCpuVariant(getVariantOverride());
 	const addonFilenames = getAddonFilenames({ tag: platformTag, arch: process.arch, variant: selectedVariant });
@@ -824,6 +835,7 @@ export function initLoaderContext(overrides = {}) {
 		addonFilenames,
 		isCompiledBinary,
 		stageFromNodeModules,
+		exclusiveNativeDir,
 		nativeDir,
 		leafPackageDir,
 		execDir,
@@ -841,6 +853,7 @@ export function initLoaderContext(overrides = {}) {
 	const versionSentinelExport = versionSentinelFor(packageVersion);
 
 	return {
+		exclusiveNativeDir,
 		platformTag,
 		packageVersion,
 		nativeDir,
@@ -858,9 +871,9 @@ export function initLoaderContext(overrides = {}) {
 	};
 }
 
-export function loadNative() {
+export function loadNative(overrides = {}) {
 	startupMarker("native:loadNative:start");
-	const ctx = initLoaderContext();
+	const ctx = initLoaderContext(overrides);
 	const require_ = createRequire(import.meta.url);
 
 	const errors = [];
