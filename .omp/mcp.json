@@ -1,0 +1,15 @@
+{
+  "mcpServers": {
+    "jetbrains": {
+      "type": "sse",
+      "url": "http://127.0.0.1:64542/sse",
+      "headers": {
+        "IJ_MCP_SERVER_PROJECT_PATH": "${HOME}/Projects/nehpz/oh-my-pi"
+      }
+    }
+  },
+  "disabledServers": [
+    "netdata-cloud",
+    "idea"
+  ]
+}
