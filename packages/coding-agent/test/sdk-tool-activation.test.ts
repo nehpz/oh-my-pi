@@ -6,6 +6,7 @@ import { type } from "@oh-my-pi/omptype";
 import type { AgentTool, StreamFn } from "@oh-my-pi/pi-agent-core";
 import type { Model, ToolResultMessage } from "@oh-my-pi/pi-ai";
 import { createMockModel } from "@oh-my-pi/pi-ai/providers/mock";
+import type { CursorExecRejection } from "@oh-my-pi/pi-ai/types";
 import { getBundledModel } from "@oh-my-pi/pi-catalog/models";
 import { ModelRegistry } from "@oh-my-pi/pi-coding-agent/config/model-registry";
 import { Settings } from "@oh-my-pi/pi-coding-agent/config/settings";
@@ -60,6 +61,16 @@ const sdkCustomTool = {
 		return { content: [{ type: "text", text: "sdk custom" }] };
 	},
 } satisfies CustomTool;
+
+function asToolResult(value: ToolResultMessage | CursorExecRejection): ToolResultMessage {
+	if ("rejected" in value) throw new Error(`Expected tool result, got rejection: ${value.rejected}`);
+	return value;
+}
+
+function asRejection(value: ToolResultMessage | CursorExecRejection): CursorExecRejection {
+	if (!("rejected" in value)) throw new Error("Expected policy rejection, got tool result");
+	return value;
+}
 
 describe("createAgentSession defaultInactive tool activation", () => {
 	const tempDirs: string[] = [];
@@ -2240,10 +2251,12 @@ describe("createAgentSession defaultInactive tool activation", () => {
 			const { session } = await createAgentSession(baseOptions(tempDir));
 			try {
 				const handlers = await captureCursorExecHandlers(session, cursorModel);
-				const result = await handlers.piEdit({
-					toolCallId: "sdk-switch-1",
-					args: { path: target, edits: [{ oldText: "beta", newText: "gamma" }] },
-				} as never);
+				const result = asToolResult(
+					await handlers.piEdit({
+						toolCallId: "sdk-switch-1",
+						args: { path: target, edits: [{ oldText: "beta", newText: "gamma" }] },
+					} as never),
+				);
 
 				expect(result.isError).toBeFalsy();
 				expect(fs.readFileSync(target, "utf8")).toBe("alpha\ngamma\n");
@@ -2287,12 +2300,14 @@ describe("createAgentSession defaultInactive tool activation", () => {
 			const { session } = await createAgentSession({ ...baseOptions(tempDir), toolNames: ["read"] });
 			try {
 				const handlers = await captureCursorExecHandlers(session, cursorModel);
-				const result = await handlers.piEdit({
-					toolCallId: "sdk-switch-2",
-					args: { path: target, edits: [{ oldText: "beta", newText: "gamma" }] },
-				} as never);
+				const result = asRejection(
+					await handlers.piEdit({
+						toolCallId: "sdk-switch-2",
+						args: { path: target, edits: [{ oldText: "beta", newText: "gamma" }] },
+					} as never),
+				);
 
-				expect(result.isError).toBe(true);
+				expect(result.rejected).toContain('Tool "edit" is not granted');
 				expect(fs.readFileSync(target, "utf8")).toBe("alpha\nbeta\n");
 			} finally {
 				await session.dispose();
@@ -2319,10 +2334,12 @@ describe("createAgentSession defaultInactive tool activation", () => {
 				const fullWriteDescription = session.getToolByName("write")?.description;
 				expect(fullWriteDescription).toBeDefined();
 
-				const allowed = await handlers.delete({
-					toolCallId: "sdk-write-active",
-					path: allowedTarget,
-				} as never);
+				const allowed = asToolResult(
+					await handlers.delete({
+						toolCallId: "sdk-write-active",
+						path: allowedTarget,
+					} as never),
+				);
 				expect(allowed.isError).toBe(false);
 				expect(fs.existsSync(allowedTarget)).toBe(false);
 
@@ -2332,7 +2349,8 @@ describe("createAgentSession defaultInactive tool activation", () => {
 					toolCallId: "sdk-write-revoked",
 					path: revokedTarget,
 				} as never);
-				expect(revoked.isError).toBe(true);
+				if (!("rejected" in revoked)) throw new Error("expected policy rejection");
+				expect(revoked.toolResult?.isError).toBe(true);
 				expect(fs.existsSync(revokedTarget)).toBe(true);
 
 				session.setPlanModeState({ enabled: true, planFilePath: "local://PLAN.md" });
@@ -2343,7 +2361,8 @@ describe("createAgentSession defaultInactive tool activation", () => {
 					toolCallId: "sdk-write-transport-only",
 					path: transportTarget,
 				} as never);
-				expect(transportOnly.isError).toBe(true);
+				if (!("rejected" in transportOnly)) throw new Error("expected policy rejection");
+				expect(transportOnly.toolResult?.isError).toBe(true);
 				expect(fs.existsSync(transportTarget)).toBe(true);
 			} finally {
 				await session.dispose();
@@ -2381,7 +2400,8 @@ describe("createAgentSession defaultInactive tool activation", () => {
 						toolCallId: "sdk-write-revoked-during-rebuild",
 						path: target,
 					} as never);
-					expect(revoked.isError).toBe(true);
+					if (!("rejected" in revoked)) throw new Error("expected policy rejection");
+					expect(revoked.toolResult?.isError).toBe(true);
 					expect(fs.existsSync(target)).toBe(true);
 				} finally {
 					releaseRebuild.resolve();
@@ -2419,7 +2439,9 @@ describe("createAgentSession defaultInactive tool activation", () => {
 				const handlers = await captureCursorExecHandlers(session, cursorModel);
 				await sessionManager.moveTo(movedDir);
 
-				const result = await handlers.delete({ toolCallId: "sdk-cwd-1", path: "obsolete.txt" } as never);
+				const result = asToolResult(
+					await handlers.delete({ toolCallId: "sdk-cwd-1", path: "obsolete.txt" } as never),
+				);
 
 				expect(result.isError).toBe(false);
 				expect(fs.existsSync(liveTarget)).toBe(false);

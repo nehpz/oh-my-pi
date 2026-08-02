@@ -442,6 +442,69 @@ describe("Cursor resolveExecHandler execHandlers binding", () => {
 			expect(toolResult).toMatchObject({ content: [{ type: "text", text: "rewritten" }] });
 		});
 	});
+
+	it("maps a handler rejection to the buildRejected variant and records the toolResult", async () => {
+		const rejectionToolResult: ToolResultMessage = {
+			role: "toolResult",
+			toolCallId: "call-1",
+			toolName: "bash",
+			content: [{ type: "text", text: "not granted" }],
+			isError: true,
+			timestamp: Date.now(),
+		};
+		const recorded: ToolResultMessage[] = [];
+
+		const { execResult, toolResult } = await resolveExecHandler<
+			{ command: string },
+			{ tag: string; reason?: string }
+		>(
+			{ command: "echo hi" },
+			async () => ({ rejected: "Tool not granted to this agent", toolResult: rejectionToolResult }),
+			result => {
+				recorded.push(result);
+				return result;
+			},
+			() => ({ tag: "from-tool-result" }),
+			(reason: string) => ({ tag: "rejected", reason }),
+			() => ({ tag: "error" }),
+			{ toolCallId: "call-1", toolName: "bash" },
+		);
+
+		expect(execResult).toEqual({ tag: "rejected", reason: "Tool not granted to this agent" });
+		expect(toolResult).toBe(rejectionToolResult);
+		expect(recorded).toEqual([rejectionToolResult]);
+	});
+
+	it("synthesizes and routes a paired error result for a bare rejection", async () => {
+		const recorded: ToolResultMessage[] = [];
+		const { execResult, toolResult } = await resolveExecHandler<
+			{ command: string },
+			{ tag: string; reason?: string }
+		>(
+			{ command: "echo hi" },
+			async () => ({ rejected: "Tool not granted to this agent" }),
+			result => {
+				recorded.push(result);
+				return result;
+			},
+			() => ({ tag: "from-tool-result" }),
+			(reason: string) => ({ tag: "rejected", reason }),
+			() => ({ tag: "error" }),
+			{ toolCallId: "call-2", toolName: "bash" },
+		);
+
+		expect(execResult).toEqual({ tag: "rejected", reason: "Tool not granted to this agent" });
+		expect(toolResult).toMatchObject({
+			role: "toolResult",
+			toolCallId: "call-2",
+			toolName: "bash",
+			content: [{ type: "text", text: "Tool not granted to this agent" }],
+			isError: true,
+		});
+		expect(recorded).toHaveLength(1);
+		if (!toolResult) throw new Error("expected a synthesized tool result");
+		expect(recorded[0]).toBe(toolResult);
+	});
 });
 
 describe("Cursor system prompt encoding", () => {
