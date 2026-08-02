@@ -654,9 +654,11 @@ describe("Cursor MCP StrReplace fallback", () => {
 		);
 
 		expect(await Bun.file(target).text()).toBe("alpha\ngamma\n");
-		expect(result.content.map(part => (part.type === "text" ? part.text : "")).join("")).not.toMatch(
-			/not found|not available/i,
-		);
+		expect(
+			asToolResult(result)
+				.content.map(part => (part.type === "text" ? part.text : ""))
+				.join(""),
+		).not.toMatch(/not found|not available/i);
 	});
 
 	it("runs replace-mode when advertised hashline edit is called with old_string", async () => {
@@ -683,9 +685,11 @@ describe("Cursor MCP StrReplace fallback", () => {
 		);
 
 		expect(await Bun.file(target).text()).toBe("alpha\ngamma\n");
-		expect(result.content.map(part => (part.type === "text" ? part.text : "")).join("")).not.toMatch(
-			/not found|not available/i,
-		);
+		expect(
+			asToolResult(result)
+				.content.map(part => (part.type === "text" ? part.text : ""))
+				.join(""),
+		).not.toMatch(/not found|not available/i);
 	});
 
 	it("does not run replace-mode for a hashline edit payload", async () => {
@@ -732,7 +736,7 @@ describe("Cursor MCP StrReplace fallback", () => {
 			}),
 		);
 
-		expect(result.isError).toBe(true);
+		expect(asToolResult(result).isError).toBe(true);
 		expect(await Bun.file(target).text()).toBe("alpha\nbeta\n");
 	});
 });
