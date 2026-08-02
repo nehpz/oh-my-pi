@@ -92,8 +92,17 @@ describe("issue 4812: pi-natives release process-stale diagnosis", () => {
 		});
 	});
 
-	it("skips validation entirely in workspace dev", () => {
+	it("reports an actionable rebuild when a workspace addon is stale", async () => {
 		const ctx = { ...ctxFor("16.3.11"), isWorkspaceLoad: true };
-		expect(() => validateLoadedBindings(ctx, { grep: () => {} }, unusedCandidate)).not.toThrow();
+		await withCandidate(stamped("16.3.10"), candidate => {
+			expect(() => validateLoadedBindings(ctx, reporting("16.3.10"), candidate)).toThrow("bun run build:native");
+		});
+	});
+
+	it("detects the expected stamp across a read-chunk boundary", async () => {
+		const ctx = { ...ctxFor("16.3.11"), isWorkspaceLoad: true };
+		await withCandidate(`${"x".repeat(64 * 1024 - 5)}${stamped("16.3.11")}`, candidate => {
+			expect(() => validateLoadedBindings(ctx, reporting("16.3.10"), candidate)).toThrow("restart omp");
+		});
 	});
 });

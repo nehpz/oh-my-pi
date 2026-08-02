@@ -9,7 +9,7 @@ This page defines the public JS/TS boundary between `@oh-my-pi/pi-natives` calle
 3. `gen-enums.ts` reads the declarations, rewrites napi-rs `const enum` declarations to runtime-usable declarations, and replaces the marked block in `native/index.js` with explicit class/function exports and literal enum objects.
 4. `native/index.js` loads the addon and binds that generated root surface. `DesktopSession` is routed through `desktop-adapter.js` for compatibility with older desktop ABIs; current classes pass through unchanged.
 
-There is no `NativeBindings` declaration-merging lifecycle or `packages/natives/src/<module>` wrapper convention. The loader checks release identity for install/compiled loads (with a narrow pre-sentinel compatibility exception), not every public symbol; a function export the loaded addon omits is `missingNativeExport(name)` — `undefined` on a current addon, and on a stale workspace addon a throwing stub that names the addon and the rebuild command (`bun run build:native`).
+There is no `NativeBindings` declaration-merging lifecycle or `packages/natives/src/<module>` wrapper convention. The loader checks release identity for every load (with a narrow pre-sentinel compatibility exception), not every public symbol; a function export the loaded addon omits is `missingNativeExport(name)` — `undefined` on a current addon, and on a stale addon a throwing stub that names the addon and the rebuild command (`bun run build:native`).
 
 ## Public entrypoints
 
@@ -103,8 +103,8 @@ Numeric and string enum declarations constrain TypeScript callers but do not by 
 ## Import and error behavior
 
 - Importing the root throws if no compatible addon candidate loads. Lazy subpaths defer that failure until a native-backed operation is called.
-- Install and compiled candidates normally must report the package version through their stamp or legacy sentinel. A pre-sentinel addon with no release identity can pass a narrow core/desktop compatibility check if its disk file lacks the expected current stamp. Workspace-development candidates skip this validation.
-- A resident prior-version addon can produce a restart-specific mismatch; a stale file on disk produces a reinstall diagnosis.
+- Candidates normally must report the package version through their stamp or legacy sentinel, including workspace-development candidates. A pre-sentinel addon with no release identity can pass a narrow core/desktop compatibility check if its disk file lacks the expected current stamp.
+- A resident prior-version addon can produce a restart-specific mismatch; a stale file on disk produces a reinstall diagnosis, or rebuild-and-restart guidance for workspace loads.
 - The loader does not check the full export set. A same-version incomplete build can therefore load and later expose `undefined` members.
 - N-API conversion errors throw or reject before Rust business logic runs. Native task and async failures generally reject their promises; `EditSession.apply` returns engine failures as `isError` outcomes instead.
 
