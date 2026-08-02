@@ -71,8 +71,22 @@ describe("issue 4812: pi-natives sentinel process-stale diagnosis", () => {
 		});
 	});
 
-	it("skips validation entirely in workspace dev", () => {
+	it("reports an actionable rebuild when a workspace addon is stale", async () => {
 		const ctx = { ...ctxFor("16.3.11"), isWorkspaceLoad: true };
-		expect(() => validateLoadedBindings(ctx, { grep: () => {} }, unusedCandidate)).not.toThrow();
+		await withCandidate("__piNativesV16_3_10", candidate => {
+			expect(() =>
+				validateLoadedBindings(ctx, { __piNativesV16_3_10: () => {}, grep: () => {} }, candidate),
+			).toThrow("bun run build:native");
+		});
+	});
+
+	it("detects the expected sentinel across a read-chunk boundary", async () => {
+		const ctx = { ...ctxFor("16.3.11"), isWorkspaceLoad: true };
+		const expectedSentinel = "__piNativesV16_3_11";
+		await withCandidate(`${"x".repeat(64 * 1024 - 5)}${expectedSentinel}`, candidate => {
+			expect(() =>
+				validateLoadedBindings(ctx, { __piNativesV16_3_10: () => {}, grep: () => {} }, candidate),
+			).toThrow("restart omp");
+		});
 	});
 });

@@ -105,14 +105,14 @@ For each candidate:
 
 1. Emit a startup marker when enabled.
 2. `require(candidate)`.
-3. Unless this is workspace development, require the expected package-version sentinel function.
+3. Require the expected package-version sentinel function; addons predating sentinels may bridge on a compatible ABI signature.
 4. Call `__ompInstallTokioRuntime()` if the addon provides it.
 5. Best-effort remove valid semantic-version cache directories older than the current version.
 6. Return the bindings.
 
-The sentinel error distinguishes a previous addon still resident in the current process from a stale file on disk. If the loaded exports carry an older sentinel but the candidate bytes contain the expected current sentinel, the diagnostic says to restart. Otherwise it says to reinstall. The loader does not validate all public exports.
+The sentinel error distinguishes a previous addon still resident in the current process from a stale file on disk. If the loaded exports carry an older sentinel but the candidate bytes contain the expected current sentinel, the diagnostic says to restart. Otherwise it says to reinstall — or, for workspace loads, to run `bun run build:native` and restart omp. The loader does not validate all public exports.
 
-Workspace development is the one case that skips the sentinel check, so a checkout that pulled a newer release boots before its rebuild. That tolerance is not silent: `native/index.js` exports `missingNativeExport(symbol)` in every function slot the addon omits, which is `undefined` on a current addon and a throwing stub on a stale one naming the symbol, the addon path, the loaded and expected releases, and `bun run build:native`. `nativeAddonStatus()` reports the same identity (`path`, `sentinel`, `expectedSentinel`, `packageVersion`, `stale`) for callers that surface it themselves.
+An addon that predates version sentinels can still load through the loader's ABI-compatibility bridge; it carries a stale identity. That tolerance is not silent: `native/index.js` exports `missingNativeExport(symbol)` in every function slot the addon omits, which is `undefined` on a current addon and a throwing stub on a stale one naming the symbol, the addon path, the loaded and expected releases, and `bun run build:native`. `nativeAddonStatus()` reports the same identity (`path`, `sentinel`, `expectedSentinel`, `packageVersion`, `stale`) for callers that surface it themselves.
 
 Rust module initialization installs crash diagnostics but does not spawn runtime threads under the dynamic-loader lock. The optional post-load hook installs bounded Windows Tokio and Rayon pools. It is best-effort; older addons or hook failures fall back to napi-rs behavior. Set `PI_DEBUG_STARTUP` to emit synchronous `[startup]` markers to stderr, including hook success/failure.
 
@@ -135,7 +135,7 @@ entrypoint evaluates or lazy wrapper is invoked
   -> extract matching embedded archive, if any
   -> otherwise stage Windows node_modules addon, if applicable
   -> require candidates in deterministic order
-       -> validate sentinel outside workspace development
+       -> validate sentinel
        -> install optional post-load runtime; record addon identity
        -> best-effort clean older version caches
        -> return bindings
