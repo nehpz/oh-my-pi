@@ -9,6 +9,7 @@ import type {
 	AgentToolUpdateCallback,
 } from "@oh-my-pi/pi-agent-core";
 import type {
+	CursorExecRejection,
 	CursorMcpCall,
 	CursorMcpResource,
 	CursorMcpResourceContent,
@@ -228,17 +229,41 @@ function buildToolErrorResult(message: string): AgentToolResult<unknown> {
 	};
 }
 
+/**
+ * Rejection for a Cursor-native tool the session never granted (e.g. `bash` in
+ * a read-only scout). Cursor's server advertises its native toolset
+ * unconditionally, so the model can always emit the call; answering with the
+ * protocol-level `rejected` variant (plus an instructive reason) makes the
+ * model treat it as policy and switch tools, where an error result reads as a
+ * broken environment and triggers retry spirals.
+ */
+function buildNotGrantedRejection(
+	options: CursorExecBridgeOptions,
+	toolName: string,
+	toolCallId: string,
+	reasonOverride?: string,
+): CursorExecRejection {
+	const granted = Array.from(options.tools.keys())
+		.filter(name => !name.startsWith("mcp__"))
+		.sort();
+	const rejected =
+		reasonOverride ??
+		`Tool "${toolName}" is not granted to this agent. This is a policy restriction, not a failure — do not retry "${toolName}".` +
+			(granted.length > 0 ? ` Granted tools: ${granted.join(", ")}.` : "");
+	const result = buildToolErrorResult(rejected);
+	return { rejected, toolResult: createToolResultMessage(toolCallId, toolName, result, true) };
+}
+
 async function executeTool(
 	options: CursorExecBridgeOptions,
 	toolName: string,
 	toolCallId: string,
 	args: Record<string, unknown>,
 	overrideTool?: CursorBridgeTool,
-): Promise<ToolResultMessage> {
+): Promise<ToolResultMessage | CursorExecRejection> {
 	const tool = overrideTool ?? options.getExecutableTool?.(toolName) ?? options.tools.get(toolName);
 	if (!tool) {
-		const result = buildToolErrorResult(`Tool "${toolName}" not available`);
-		return createToolResultMessage(toolCallId, toolName, result, true);
+		return buildNotGrantedRejection(options, toolName, toolCallId);
 	}
 
 	// Same rule as synthesizeCursorExecToolCall: optional kwargs must be absent,
@@ -324,8 +349,12 @@ async function executeDelete(options: CursorExecBridgeOptions, pathArg: string, 
 	const toolName = "delete";
 
 	if (!allowsDirectFileMutation(options)) {
-		const result = buildToolErrorResult(`Tool "${toolName}" not available`);
-		return createToolResultMessage(toolCallId, toolName, result, true);
+		return buildNotGrantedRejection(
+			options,
+			toolName,
+			toolCallId,
+			"Native file deletion is not permitted for this agent. This is a policy restriction, not a failure — do not retry.",
+		);
 	}
 
 	// Unlike every other frame, this one mutates the filesystem directly instead
@@ -335,7 +364,12 @@ async function executeDelete(options: CursorExecBridgeOptions, pathArg: string, 
 	// this, a configured `deny` or an `always-ask` session still lost the file.
 	const refusal = refuseByWritePolicy(options, toolName, pathArg);
 	if (refusal) {
-		return createToolResultMessage(toolCallId, toolName, buildToolErrorResult(refusal), true);
+		return buildNotGrantedRejection(
+			options,
+			toolName,
+			toolCallId,
+			`${refusal} This is a policy restriction, not a failure — do not retry.`,
+		);
 	}
 
 	options.emitEvent?.({ type: "tool_execution_start", toolCallId, toolName, args: { path: pathArg } });
@@ -515,8 +549,7 @@ export class CursorExecHandlers implements ICursorExecHandlers {
 		const toolName = "bash";
 		const tool = this.options.tools.get(toolName);
 		if (!tool) {
-			const result = buildToolErrorResult(`Tool "${toolName}" not available`);
-			return createToolResultMessage(toolCallId, toolName, result, true);
+			return buildNotGrantedRejection(this.options, toolName, toolCallId);
 		}
 
 		const timeoutSeconds = args.timeout && args.timeout > 0 ? args.timeout : undefined;
