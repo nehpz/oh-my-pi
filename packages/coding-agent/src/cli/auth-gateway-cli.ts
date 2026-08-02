@@ -31,7 +31,7 @@ import {
 	type SnapshotResponse,
 } from "@oh-my-pi/pi-ai/auth-broker";
 import { DEFAULT_AUTH_GATEWAY_BIND, startAuthGateway } from "@oh-my-pi/pi-ai/auth-gateway";
-import { type GeneratedProvider, getBundledModels } from "@oh-my-pi/pi-catalog/models";
+import { type GeneratedProvider, getBundledModels, getBundledProviders } from "@oh-my-pi/pi-catalog/models";
 import { getConfigRootDir, isEnoent, logger, VERSION } from "@oh-my-pi/pi-utils";
 import chalk from "@oh-my-pi/pi-utils/chalk";
 import { ModelRegistry } from "../config/model-registry";
@@ -149,6 +149,13 @@ async function fetchBrokerSnapshot(client: AuthBrokerClient): Promise<SnapshotRe
  */
 const CATALOG_REFRESH_INTERVAL_MS = 15 * 60 * 1000;
 
+export interface AuthGatewayModelCatalog {
+	/** Lookup structure for `resolveModel`: each model aliased under its qualified `provider/id` key (always) and its bare `id` key (first-write-wins, for legacy clients). */
+	modelById: Map<string, Model<Api>>;
+	/** Enumeration list for `listModels` / `/v1/models` — exactly one entry per model. */
+	models: Model<Api>[];
+}
+
 /**
  * Index resolvable models by the request ids clients may send: the
  * provider-qualified `provider/id` (always) and the bare `id` (first-write-wins
@@ -168,6 +175,24 @@ export function indexModelsByRequestId(
 	return modelById;
 }
 
+/**
+ * Build the bundled model resolver + enumeration catalog. The lookup map
+ * aliases each model under qualified and bare ids, while `models` contains
+ * each credentialed model exactly once.
+ */
+export function buildAuthGatewayModelCatalog(
+	providersWithCreds: ReadonlySet<string>,
+	options?: { providers?: readonly string[]; getModels?: (provider: string) => readonly Model<Api>[] },
+): AuthGatewayModelCatalog {
+	const providers = options?.providers ?? getBundledProviders();
+	const getModels = options?.getModels ?? ((provider: string) => getBundledModels(provider as GeneratedProvider));
+	const models: Model<Api>[] = [];
+	for (const provider of providers) {
+		if (!providersWithCreds.has(provider)) continue;
+		models.push(...getModels(provider));
+	}
+	return { modelById: indexModelsByRequestId(models, providersWithCreds), models };
+}
 async function runServe(flags: AuthGatewayCommandArgs["flags"]): Promise<void> {
 	const brokerConfig = await resolveAuthBrokerConfig();
 	if (!brokerConfig) {
@@ -213,7 +238,8 @@ async function runServe(flags: AuthGatewayCommandArgs["flags"]): Promise<void> {
 	for (const entry of snapshot.credentials) providersWithCreds.add(entry.provider);
 	const registry = new ModelRegistry(storage, undefined, { ignoreLocalModelConfig: true });
 	await registry.refresh();
-	let modelById = indexModelsByRequestId(registry.getAll(), providersWithCreds);
+	let models = registry.getAll().filter(model => providersWithCreds.has(model.provider));
+	let modelById = indexModelsByRequestId(models, providersWithCreds);
 
 	const handle = startAuthGateway({
 		storage,
@@ -221,7 +247,7 @@ async function runServe(flags: AuthGatewayCommandArgs["flags"]): Promise<void> {
 		bearerTokens: gatewayToken ? [gatewayToken] : [],
 		version: VERSION,
 		resolveModel: (id: string) => modelById.get(id),
-		listModels: () => modelById.values(),
+		listModels: () => models,
 	});
 	process.stdout.write(`auth-gateway listening on ${handle.url}\n`);
 	if (gatewayToken) {
@@ -239,7 +265,8 @@ async function runServe(flags: AuthGatewayCommandArgs["flags"]): Promise<void> {
 		void registry
 			.refresh()
 			.then(() => {
-				modelById = indexModelsByRequestId(registry.getAll(), providersWithCreds);
+				models = registry.getAll().filter(model => providersWithCreds.has(model.provider));
+				modelById = indexModelsByRequestId(models, providersWithCreds);
 			})
 			.catch(error => {
 				logger.warn("auth-gateway catalog refresh failed", {

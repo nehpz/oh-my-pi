@@ -2294,7 +2294,7 @@ providers:
 				return new Response(
 					JSON.stringify({
 						data: [
-							{ id: "openai-test/contextual-model", context_length: 16385 },
+							{ id: "openai-test/contextual-model", context_length: 16385, max_tokens: 8192 },
 							{ id: "openai-test/no-context-model" },
 						],
 					}),
@@ -2309,6 +2309,7 @@ providers:
 			.getAll()
 			.find(m => m.provider === "openai-test" && m.id === "openai-test/contextual-model");
 		expect(contextual?.contextWindow).toBe(16385);
+		expect(contextual?.maxTokens).toBe(8192);
 		const fallback = registry
 			.getAll()
 			.find(m => m.provider === "openai-test" && m.id === "openai-test/no-context-model");

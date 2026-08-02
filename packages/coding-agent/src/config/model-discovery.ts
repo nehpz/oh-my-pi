@@ -845,6 +845,7 @@ export async function discoverOpenAIModelsList(
 						id?: string;
 						max_model_len?: unknown;
 						context_length?: unknown;
+						max_tokens?: unknown;
 						input?: unknown;
 						input_modalities?: unknown;
 						architecture?: unknown;
@@ -887,6 +888,7 @@ export async function discoverOpenAIModelsList(
 			nativeMetadataForModel?.contextWindow ??
 			reference?.contextWindow ??
 			DISCOVERY_DEFAULT_CONTEXT_WINDOW;
+		const providerMaxTokens = toPositiveNumberOrUndefined(item.max_tokens);
 		discovered.push(
 			buildModel({
 				id,
@@ -908,7 +910,10 @@ export async function discoverOpenAIModelsList(
 				// Cap the reference's output limit at the discovered context
 				// window so an ID collision with a larger bundled model can
 				// never request more tokens than the local runtime advertises.
-				maxTokens: Math.min(reference?.maxTokens ?? discoveryDefaultMaxTokens(api), contextWindow),
+				maxTokens: Math.min(
+					providerMaxTokens ?? reference?.maxTokens ?? discoveryDefaultMaxTokens(api),
+					contextWindow,
+				),
 				headers,
 				compat: {
 					supportsStore: false,
