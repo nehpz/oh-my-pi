@@ -39,7 +39,12 @@ import {
 	startAuthGateway,
 } from "@oh-my-pi/pi-ai/auth-gateway";
 import { authPolicyFor } from "@oh-my-pi/pi-catalog/compat/auth";
-import { type GeneratedProvider, getBundledModels, getEffectiveTokenCost } from "@oh-my-pi/pi-catalog/models";
+import {
+	type GeneratedProvider,
+	getBundledModels,
+	getBundledProviders,
+	getEffectiveTokenCost,
+} from "@oh-my-pi/pi-catalog/models";
 import { type ModelKind, modelKind } from "@oh-my-pi/pi-catalog/types";
 import { getConfigRootDir, logger, VERSION } from "@oh-my-pi/pi-utils";
 import chalk from "@oh-my-pi/pi-utils/chalk";
@@ -147,6 +152,13 @@ async function fetchBrokerSnapshot(client: AuthBrokerClient): Promise<SnapshotRe
  * cached row is stale, so a short interval stays cheap.
  */
 const CATALOG_REFRESH_INTERVAL_MS = 15 * 60 * 1000;
+
+export interface AuthGatewayModelCatalog {
+	/** Lookup structure for `resolveModel`: each model aliased under its qualified `provider/id` key (always) and its bare `id` key (first-write-wins, for legacy clients). */
+	modelById: Map<string, Model<Api>>;
+	/** Enumeration list for `listModels` / `/v1/models` — exactly one entry per model. */
+	models: Model<Api>[];
+}
 
 /**
  * How often a long-lived `serve` polls the broker-backed store for credential
@@ -317,6 +329,24 @@ export function createSerializedRebuilder(run: (force: boolean) => Promise<void>
 	return rebuild;
 }
 
+/**
+ * Build the bundled model resolver + enumeration catalog. The lookup map
+ * aliases each model under qualified and bare ids, while `models` contains
+ * each credentialed model exactly once.
+ */
+export function buildAuthGatewayModelCatalog(
+	providersWithCreds: ReadonlySet<string>,
+	options?: { providers?: readonly string[]; getModels?: (provider: string) => readonly Model<Api>[] },
+): AuthGatewayModelCatalog {
+	const providers = options?.providers ?? getBundledProviders();
+	const getModels = options?.getModels ?? ((provider: string) => getBundledModels(provider as GeneratedProvider));
+	const models: Model<Api>[] = [];
+	for (const provider of providers) {
+		if (!providersWithCreds.has(provider)) continue;
+		models.push(...getModels(provider));
+	}
+	return { modelById: indexModelsByRequestId(models, providersWithCreds), models };
+}
 async function runServe(flags: AuthGatewayCommandArgs["flags"]): Promise<void> {
 	const brokerConfig = await resolveAuthBrokerConfig();
 	if (!brokerConfig) {
@@ -382,7 +412,9 @@ async function runServe(flags: AuthGatewayCommandArgs["flags"]): Promise<void> {
 	const registry = new ModelRegistry(storage, undefined, { ignoreLocalModelConfig: true, settings });
 	let modelById = new Map<string, Model<Api>>();
 	// Routable models as one stable array per rebuild: `resolveProviderModelReference` caches its
-	// index on the array identity, so variant lookups stay O(1) between rebuilds.
+	// index on the array identity, so variant lookups stay O(1) between rebuilds. It is also the
+	// `/v1/models` enumeration list — exactly one entry per model; `modelById` aliases each model
+	// under both its qualified and bare id, so enumerating its values would emit duplicates.
 	let routable: Model<Api>[] = [];
 	// Rebuild the served catalog (a `registry.refresh()` pass, then re-index
 	// against the current credential set). Credential-triggered rebuilds force
@@ -406,7 +438,7 @@ async function runServe(flags: AuthGatewayCommandArgs["flags"]): Promise<void> {
 		trustProxyHeaders: flags.trustProxyHeaders,
 		version: VERSION,
 		resolveModel: (id: string) => resolveGatewayModel(id, modelById, routable),
-		listModels: () => modelById.values(),
+		listModels: () => routable,
 		excludeProviders: new Set(cfgDisabledProviders.get(settings)),
 		clients,
 	});
