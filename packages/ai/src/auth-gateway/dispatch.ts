@@ -30,7 +30,7 @@ export interface AuthGatewayRouteOptions {
 	 * dependency in `pi-ai`).
 	 */
 	resolveModel: ModelResolver;
-	/** Optional supplier for `/v1/models` listing. Returns the full model array. */
+	/** Optional supplier for `/v1/models` listing. Must yield each model exactly once — not a lookup map's `.values()`, which may alias one model under multiple keys. */
 	listModels?: () => Iterable<Model<Api>>;
 	/** Providers the host does not serve; `/v1/usage` and `/v1/credentials/check` leave their accounts out. */
 	excludeProviders?: ReadonlySet<string>;
