@@ -65,7 +65,7 @@ export interface AuthGatewayBootOptions extends AuthGatewayServerOptions {
 	 * dependency in `pi-ai`).
 	 */
 	resolveModel: ModelResolver;
-	/** Optional supplier for `/v1/models` listing. Returns the full model array. */
+	/** Optional supplier for `/v1/models` listing. Must yield each model exactly once — not a lookup map's `.values()`, which may alias one model under multiple keys. */
 	listModels?: () => Iterable<Model<Api>>;
 }
 
@@ -807,6 +807,9 @@ async function handleCredentialsCheck(storage: AuthStorage, signal: AbortSignal)
  * size and capability-gate discovered models: `context_length`,
  * `max_output_tokens`, `input_modalities`, and `supports_tools` (only emitted
  * when the catalog explicitly reports `false`; absent means usable).
+ * `max_tokens` mirrors `max_output_tokens` under the fallback name our own
+ * generic `openai-models-list` discovery client checks (see
+ * `packages/coding-agent/src/config/model-discovery.ts`).
  */
 interface ModelListRow {
 	id: string;
@@ -816,6 +819,7 @@ interface ModelListRow {
 	display_name: string;
 	context_length?: number;
 	max_output_tokens?: number;
+	max_tokens?: number;
 	input_modalities: ("text" | "image")[];
 	supports_tools?: boolean;
 }
@@ -836,7 +840,10 @@ function handleModelsList(opts: AuthGatewayBootOptions): Response {
 			input_modalities: model.input,
 		};
 		if (model.contextWindow != null) row.context_length = model.contextWindow;
-		if (model.maxTokens != null) row.max_output_tokens = model.maxTokens;
+		if (model.maxTokens != null) {
+			row.max_output_tokens = model.maxTokens;
+			row.max_tokens = model.maxTokens;
+		}
 		if (model.supportsTools === false) row.supports_tools = false;
 		data.push(row);
 	}
