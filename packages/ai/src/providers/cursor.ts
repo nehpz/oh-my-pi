@@ -192,6 +192,7 @@ import type {
 	CursorExecHandlerResult,
 	CursorExecHandlers,
 	CursorExecPairing,
+	CursorExecRejection,
 	CursorMcpCall,
 	CursorShellStreamCallbacks,
 	CursorTodoSnapshot,
@@ -3343,6 +3344,12 @@ export async function resolveExecHandler<TArgs, R>(
 
 	try {
 		const handlerResult = await handler(args);
+		if (isExecRejection(handlerResult)) {
+			const rejectedToolResult =
+				(await applyToolResultHandler(handlerResult.toolResult, onToolResult)) ??
+				(await pair(handlerResult.rejected, true));
+			return { execResult: buildRejected(handlerResult.rejected), toolResult: rejectedToolResult };
+		}
 		const { execResult, toolResult } = splitExecHandlerResult(handlerResult);
 		const finalToolResult = await applyToolResultHandler(toolResult, onToolResult);
 
@@ -3413,6 +3420,14 @@ function mcpContentToText(content: unknown[] | undefined): string {
 	return parts.join("\n");
 }
 
+function isExecRejection(value: unknown): value is CursorExecRejection {
+	return (
+		!!value &&
+		typeof value === "object" &&
+		typeof (value as CursorExecRejection).rejected === "string" &&
+		!isToolResultMessage(value)
+	);
+}
 function splitExecHandlerResult<R>(result: CursorExecHandlerResult<R>): {
 	execResult?: R;
 	toolResult?: ToolResultMessage;
