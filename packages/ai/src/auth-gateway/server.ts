@@ -77,6 +77,7 @@ import type {
 } from "./types";
 import { DEFAULT_AUTH_GATEWAY_BIND } from "./types";
 
+
 // `parseBind` lives in ../utils/parse-bind so the gateway and broker can't
 // drift on accepted inputs (e.g. empty hostname, IPv6 brackets).
 
@@ -729,6 +730,9 @@ async function handleCredentialsCheck(storage: AuthStorage, signal: AbortSignal)
  * when the catalog explicitly reports `false`; absent means usable). `kind` is
  * emitted for non-chat rows (`judge`, `image`, `tts`, `stt`, `embedding`,
  * `rerank`, `video`) so clients can keep them off chat routes; absent means chat.
+ * `max_tokens` mirrors `max_output_tokens` under the fallback name our own
+ * generic `openai-models-list` discovery client checks (see
+ * `packages/coding-agent/src/config/model-discovery.ts`).
  */
 interface ModelListRow {
 	id: string;
@@ -739,6 +743,7 @@ interface ModelListRow {
 	display_name: string;
 	context_length?: number;
 	max_output_tokens?: number;
+	max_tokens?: number;
 	input_modalities: ("text" | "image")[];
 	supports_tools?: boolean;
 }
@@ -760,7 +765,10 @@ function handleModelsList(opts: AuthGatewayRouteOptions): Response {
 		};
 		if (modelKind(model) !== "chat") row.kind = modelKind(model);
 		if (model.contextWindow != null) row.context_length = model.contextWindow;
-		if (model.maxTokens != null) row.max_output_tokens = model.maxTokens;
+		if (model.maxTokens != null) {
+			row.max_output_tokens = model.maxTokens;
+			row.max_tokens = model.maxTokens;
+		}
 		if (model.supportsTools === false) row.supports_tools = false;
 		data.push(row);
 	}
