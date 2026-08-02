@@ -326,7 +326,15 @@ async function codingAgentTestCommands(bucket: CodingAgentBucket): Promise<TestC
 async function commandsForMode(mode: Mode): Promise<TestCommand[]> {
 	switch (mode) {
 		case "workspace":
-			return fastWorkspacePackages.map(pkg => workspaceTestCommand(pkg, 8));
+			return [
+				...fastWorkspacePackages.map(pkg => workspaceTestCommand(pkg, 8)),
+				{
+					// Fork-local: gate the upstream-sync tooling in CI's workspace bucket.
+					label: "scripts",
+					cwd: ".",
+					command: ["bun", "test", ...onlyFailuresArgs, "scripts/sync-upstream.test.ts"],
+				},
+			];
 		case "native":
 			return nativeAndIntegrationPackages.map(pkg => workspaceTestCommand(pkg, 4));
 		case "coding-agent-singleton":
