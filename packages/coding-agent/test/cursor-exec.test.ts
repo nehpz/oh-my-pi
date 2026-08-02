@@ -12,7 +12,7 @@ import {
 } from "@oh-my-pi/pi-agent-core";
 import { type BlockState, handleServerMessage, type ToolCallState } from "@oh-my-pi/pi-ai/providers/cursor";
 import { piTruncation } from "@oh-my-pi/pi-ai/providers/cursor/exec-modern";
-import type { AssistantMessage } from "@oh-my-pi/pi-ai/types";
+import type { AssistantMessage, CursorExecRejection, ToolResultMessage } from "@oh-my-pi/pi-ai/types";
 import { AssistantMessageEventStream } from "@oh-my-pi/pi-ai/utils/event-stream";
 import {
 	AgentClientMessageSchema,
@@ -80,6 +80,17 @@ function passthroughRunner(seen: string[] = []): ExtensionRunner {
 	} as unknown as ExtensionRunner;
 }
 
+/** Narrow a bridge handler result to a tool result; rejections fail the test. */
+function asToolResult(value: ToolResultMessage | CursorExecRejection): ToolResultMessage {
+	if ("rejected" in value) throw new Error(`Expected tool result, got rejection: ${value.rejected}`);
+	return value;
+}
+
+/** Narrow a bridge handler result to a policy rejection; tool results fail the test. */
+function asRejection(value: ToolResultMessage | CursorExecRejection): CursorExecRejection {
+	if (!("rejected" in value)) throw new Error("Expected policy rejection, got tool result");
+	return value;
+}
 describe("CursorExecHandlers.grep bridge", () => {
 	let cwd: string;
 	let searchTool: GrepTool;
@@ -101,29 +112,35 @@ describe("CursorExecHandlers.grep bridge", () => {
 
 	it("maps caseInsensitive parameter correctly through the grep bridge", async () => {
 		// 1. By default/omitted caseInsensitive, should be case-sensitive (match count 1 for "hello")
-		const defaultResult = await handlers.grep({
-			toolCallId: "call-1",
-			path: cwd,
-			pattern: "hello",
-		} as any);
+		const defaultResult = asToolResult(
+			await handlers.grep({
+				toolCallId: "call-1",
+				path: cwd,
+				pattern: "hello",
+			} as any),
+		);
 		expect((defaultResult.details as { matchCount?: number } | undefined)?.matchCount).toBe(1);
 
 		// 2. If caseInsensitive: true, should be case-insensitive (match count 2 for "hello")
-		const insensitiveResult = await handlers.grep({
-			toolCallId: "call-2",
-			path: cwd,
-			pattern: "hello",
-			caseInsensitive: true,
-		} as any);
+		const insensitiveResult = asToolResult(
+			await handlers.grep({
+				toolCallId: "call-2",
+				path: cwd,
+				pattern: "hello",
+				caseInsensitive: true,
+			} as any),
+		);
 		expect((insensitiveResult.details as { matchCount?: number } | undefined)?.matchCount).toBe(2);
 
 		// 3. If caseInsensitive: false, should be case-sensitive (match count 1 for "hello")
-		const sensitiveResult = await handlers.grep({
-			toolCallId: "call-3",
-			path: cwd,
-			pattern: "hello",
-			caseInsensitive: false,
-		} as any);
+		const sensitiveResult = asToolResult(
+			await handlers.grep({
+				toolCallId: "call-3",
+				path: cwd,
+				pattern: "hello",
+				caseInsensitive: false,
+			} as any),
+		);
 		expect((sensitiveResult.details as { matchCount?: number } | undefined)?.matchCount).toBe(1);
 	});
 
@@ -139,7 +156,9 @@ describe("CursorExecHandlers.grep bridge", () => {
 			getToolContext: () => ({ settings }) as AgentToolContext,
 		});
 		const search = async (args: { context?: number; contextBefore?: number; contextAfter?: number }) => {
-			const result = await scopedHandlers.grep({ toolCallId: "ctx", pattern: "needle", path: target, ...args });
+			const result = asToolResult(
+				await scopedHandlers.grep({ toolCallId: "ctx", pattern: "needle", path: target, ...args }),
+			);
 			expect(result.isError).toBe(false);
 			return result.content.map(c => (c.type === "text" ? c.text : "")).join("");
 		};
@@ -181,16 +200,20 @@ describe("CursorExecHandlers.grep bridge", () => {
 			createGrepTool: options => new GrepTool(createTestSession(cwd), options),
 		});
 
-		const capped = await scopedHandlers.piGrep({
-			toolCallId: "c1",
-			args: { pattern: "needle", path: cwd, limit: 3 },
-		} as never);
+		const capped = asToolResult(
+			await scopedHandlers.piGrep({
+				toolCallId: "c1",
+				args: { pattern: "needle", path: cwd, limit: 3 },
+			} as never),
+		);
 		expect((capped.details as { matchCount?: number } | undefined)?.matchCount).toBe(3);
 
-		const uncapped = await scopedHandlers.piGrep({
-			toolCallId: "c2",
-			args: { pattern: "needle", path: cwd },
-		} as never);
+		const uncapped = asToolResult(
+			await scopedHandlers.piGrep({
+				toolCallId: "c2",
+				args: { pattern: "needle", path: cwd },
+			} as never),
+		);
 		expect((uncapped.details as { matchCount?: number } | undefined)?.matchCount).toBe(10);
 	});
 
@@ -205,18 +228,22 @@ describe("CursorExecHandlers.grep bridge", () => {
 			createGrepTool: options => new GrepTool(createTestSession(cwd), options),
 		});
 
-		const noContext = await scopedHandlers.piGrep({
-			toolCallId: "c1",
-			args: { pattern: "needle here", path: path.join(cwd, "ctx.txt"), context: 0 },
-		} as never);
+		const noContext = asToolResult(
+			await scopedHandlers.piGrep({
+				toolCallId: "c1",
+				args: { pattern: "needle here", path: path.join(cwd, "ctx.txt"), context: 0 },
+			} as never),
+		);
 		const noContextText = noContext.content.map(c => (c.type === "text" ? c.text : "")).join("");
 		expect(noContextText).not.toContain("before line");
 		expect(noContextText).not.toContain("after line");
 
-		const withContext = await scopedHandlers.piGrep({
-			toolCallId: "c2",
-			args: { pattern: "needle here", path: path.join(cwd, "ctx.txt"), context: 1 },
-		} as never);
+		const withContext = asToolResult(
+			await scopedHandlers.piGrep({
+				toolCallId: "c2",
+				args: { pattern: "needle here", path: path.join(cwd, "ctx.txt"), context: 1 },
+			} as never),
+		);
 		const withContextText = withContext.content.map(c => (c.type === "text" ? c.text : "")).join("");
 		expect(withContextText).toContain("before line");
 		expect(withContextText).toContain("after line");
@@ -239,10 +266,12 @@ describe("CursorExecHandlers.grep bridge", () => {
 			createGrepTool: options => new GrepTool(createTestSession(cwd), options),
 		});
 
-		const wide = await scopedHandlers.piGrep({
-			toolCallId: "c1",
-			args: { pattern: "needle", path: spread, limit: 100 },
-		} as never);
+		const wide = asToolResult(
+			await scopedHandlers.piGrep({
+				toolCallId: "c1",
+				args: { pattern: "needle", path: spread, limit: 100 },
+			} as never),
+		);
 		const details = wide.details as { matchCount?: number; fileLimitReached?: number } | undefined;
 		expect(details?.matchCount).toBe(25);
 		// Nothing was clipped, so no pagination advice the frame cannot follow.
@@ -253,19 +282,23 @@ describe("CursorExecHandlers.grep bridge", () => {
 		// and one match per file makes the boundary sharp — a cap of 24 over 25
 		// files is clipped, a cap of 25 is complete. Reading only `cap` files
 		// cannot tell those apart.
-		const capped = await scopedHandlers.piGrep({
-			toolCallId: "c2",
-			args: { pattern: "needle", path: spread, limit: 24 },
-		} as never);
+		const capped = asToolResult(
+			await scopedHandlers.piGrep({
+				toolCallId: "c2",
+				args: { pattern: "needle", path: spread, limit: 24 },
+			} as never),
+		);
 		const cappedDetails = capped.details as { matchCount?: number; perFileLimitReached?: number } | undefined;
 		expect(cappedDetails?.matchCount).toBe(24);
 		expect(cappedDetails?.perFileLimitReached).toBe(24);
 
 		// Exactly at the cap is complete, not clipped.
-		const exact = await scopedHandlers.piGrep({
-			toolCallId: "c3",
-			args: { pattern: "needle", path: spread, limit: 25 },
-		} as never);
+		const exact = asToolResult(
+			await scopedHandlers.piGrep({
+				toolCallId: "c3",
+				args: { pattern: "needle", path: spread, limit: 25 },
+			} as never),
+		);
 		const exactDetails = exact.details as { matchCount?: number; perFileLimitReached?: number } | undefined;
 		expect(exactDetails?.matchCount).toBe(25);
 		expect(exactDetails?.perFileLimitReached).toBeUndefined();
@@ -368,13 +401,30 @@ describe("bridge tool resolution beyond the model-facing registry", () => {
 			getEditReplaceTool: () => editTool,
 			getToolContext: () => yoloToolContext(),
 		});
-		const result = await withheld.piEdit({
-			toolCallId: "e1",
-			args: { path: target, edits: [{ oldText: "beta", newText: "gamma" }] },
-		} as never);
+		const result = asToolResult(
+			await withheld.piEdit({
+				toolCallId: "e1",
+				args: { path: target, edits: [{ oldText: "beta", newText: "gamma" }] },
+			} as never),
+		);
 
 		expect(result.isError).toBeFalsy();
 		expect(await Bun.file(target).text()).toBe("alpha\ngamma\n");
+	});
+
+	it("reports the failure instead of editing when no edit tool is reachable", async () => {
+		const target = path.join(cwd, "sample.txt");
+		await Bun.write(target, "alpha\nbeta\n");
+		const unreachable = new CursorExecHandlers({ cwd, tools: new Map<string, Tool>() });
+		const result = asRejection(
+			await unreachable.piEdit({
+				toolCallId: "e2",
+				args: { path: target, edits: [{ oldText: "beta", newText: "gamma" }] },
+			} as never),
+		);
+
+		expect(result.rejected).toContain('Tool "edit" is not granted');
+		expect(await Bun.file(target).text()).toBe("alpha\nbeta\n");
 	});
 
 	it("substitutes a replace-mode edit into a granted advisor tool map", async () => {
@@ -391,10 +441,12 @@ describe("bridge tool resolution beyond the model-facing registry", () => {
 
 		const bridged = bridgeToolMap(granted, () => createBridgeEditTool(session, passthroughRunner()));
 		const handlers = new CursorExecHandlers({ cwd, tools: bridged, getToolContext: () => yoloToolContext() });
-		const result = await handlers.piEdit({
-			toolCallId: "e3",
-			args: { path: target, edits: [{ oldText: "beta", newText: "gamma" }] },
-		} as never);
+		const result = asToolResult(
+			await handlers.piEdit({
+				toolCallId: "e3",
+				args: { path: target, edits: [{ oldText: "beta", newText: "gamma" }] },
+			} as never),
+		);
 
 		expect(result.isError).toBeFalsy();
 		expect(await Bun.file(target).text()).toBe("alpha\ngamma\n");
@@ -420,10 +472,12 @@ describe("bridge tool resolution beyond the model-facing registry", () => {
 			getEditReplaceTool: () => createBridgeEditTool(session, passthroughRunner()),
 			getToolContext: () => yoloToolContext(),
 		});
-		const result = await handlers.piEdit({
-			toolCallId: "e5",
-			args: { path: target, edits: [{ oldText: "beta", newText: "gamma" }] },
-		} as never);
+		const result = asToolResult(
+			await handlers.piEdit({
+				toolCallId: "e5",
+				args: { path: target, edits: [{ oldText: "beta", newText: "gamma" }] },
+			} as never),
+		);
 
 		expect(result.isError).toBeFalsy();
 		expect(await Bun.file(target).text()).toBe("alpha\ngamma\n");
@@ -441,12 +495,14 @@ describe("bridge tool resolution beyond the model-facing registry", () => {
 			tools: new Map<string, Tool>(),
 			getEditReplaceTool: () => undefined,
 		});
-		const result = await handlers.piEdit({
-			toolCallId: "e6",
-			args: { path: target, edits: [{ oldText: "beta", newText: "gamma" }] },
-		} as never);
+		const result = asRejection(
+			await handlers.piEdit({
+				toolCallId: "e6",
+				args: { path: target, edits: [{ oldText: "beta", newText: "gamma" }] },
+			} as never),
+		);
 
-		expect(result.isError).toBe(true);
+		expect(result.rejected).toContain('Tool "edit" is not granted');
 		expect(await Bun.file(target).text()).toBe("alpha\nbeta\n");
 	});
 
@@ -466,12 +522,14 @@ describe("bridge tool resolution beyond the model-facing registry", () => {
 		expect(built).toBe(0);
 
 		const handlers = new CursorExecHandlers({ cwd, tools: withheld });
-		const result = await handlers.piEdit({
-			toolCallId: "e4",
-			args: { path: target, edits: [{ oldText: "beta", newText: "gamma" }] },
-		} as never);
+		const result = asRejection(
+			await handlers.piEdit({
+				toolCallId: "e4",
+				args: { path: target, edits: [{ oldText: "beta", newText: "gamma" }] },
+			} as never),
+		);
 
-		expect(result.isError).toBe(true);
+		expect(result.rejected).toContain('Tool "edit" is not granted');
 		expect(await Bun.file(target).text()).toBe("alpha\nbeta\n");
 	});
 
@@ -481,13 +539,14 @@ describe("bridge tool resolution beyond the model-facing registry", () => {
 		// one — otherwise a frame carrying `context`/`limit` searches anyway.
 		await Bun.write(path.join(cwd, "hit.txt"), "needle\n");
 		const denied = new CursorExecHandlers({ cwd, tools: new Map<string, Tool>() });
-		const result = await denied.piGrep({
-			toolCallId: "g0",
-			args: { pattern: "needle", path: cwd, limit: 5 },
-		} as never);
+		const result = asRejection(
+			await denied.piGrep({
+				toolCallId: "g0",
+				args: { pattern: "needle", path: cwd, limit: 5 },
+			} as never),
+		);
 
-		expect(result.isError).toBe(true);
-		expect(result.content.map(c => (c.type === "text" ? c.text : "")).join("")).toContain("not available");
+		expect(result.rejected).toContain('Tool "grep" is not granted');
 	});
 
 	it("denies a native pi_edit frame the user's policy blocks", async () => {
@@ -507,10 +566,12 @@ describe("bridge tool resolution beyond the model-facing registry", () => {
 			getToolContext: () => ({ settings }) as AgentToolContext,
 		});
 
-		const result = await handlers.piEdit({
-			toolCallId: "e5",
-			args: { path: target, edits: [{ oldText: "beta", newText: "gamma" }] },
-		} as never);
+		const result = asToolResult(
+			await handlers.piEdit({
+				toolCallId: "e5",
+				args: { path: target, edits: [{ oldText: "beta", newText: "gamma" }] },
+			} as never),
+		);
 
 		expect(result.isError).toBe(true);
 		expect(await Bun.file(target).text()).toBe("alpha\nbeta\n");
@@ -530,10 +591,12 @@ describe("bridge tool resolution beyond the model-facing registry", () => {
 			getToolContext: () => ({ settings }) as AgentToolContext,
 		});
 
-		const result = await handlers.piGrep({
-			toolCallId: "g2",
-			args: { pattern: "needle", path: cwd, context: 1, limit: 5 },
-		} as never);
+		const result = asToolResult(
+			await handlers.piGrep({
+				toolCallId: "g2",
+				args: { pattern: "needle", path: cwd, context: 1, limit: 5 },
+			} as never),
+		);
 
 		expect(result.isError).toBe(true);
 		expect(result.content.map(c => (c.type === "text" ? c.text : "")).join("")).toContain("blocked by user policy");
@@ -555,10 +618,12 @@ describe("bridge tool resolution beyond the model-facing registry", () => {
 			tools: new Map<string, Tool>(),
 			createGrepTool: factory,
 		});
-		const result = await handlers.piGrep({
-			toolCallId: "g1",
-			args: { pattern: "needle", path: cwd, limit: 5 },
-		} as never);
+		const result = asToolResult(
+			await handlers.piGrep({
+				toolCallId: "g1",
+				args: { pattern: "needle", path: cwd, limit: 5 },
+			} as never),
+		);
 
 		// The wrapper ran (its extension hook fired) and the frame's cap still
 		// reached the underlying tool.
@@ -583,10 +648,12 @@ describe("bridge tool resolution beyond the model-facing registry", () => {
 		});
 
 		const target = path.join(cwd, "denied-write.txt");
-		const result = await handlers.piWrite({
-			toolCallId: "w1",
-			args: { path: target, content: "written" },
-		} as never);
+		const result = asToolResult(
+			await handlers.piWrite({
+				toolCallId: "w1",
+				args: { path: target, content: "written" },
+			} as never),
+		);
 
 		expect(result.isError).toBe(true);
 		expect(await Bun.file(target).exists()).toBe(false);
@@ -633,14 +700,16 @@ describe("Cursor MCP StrReplace fallback", () => {
 			getToolContext: () => yoloToolContext(),
 		});
 
-		const result = await handlers.mcp({
-			name: "StrReplace",
-			providerIdentifier: "cursor",
-			toolName: "StrReplace",
-			toolCallId: "sr1",
-			args: { path: target, old_string: "beta", new_string: "gamma" },
-			rawArgs: {},
-		});
+		const result = asToolResult(
+			await handlers.mcp({
+				name: "StrReplace",
+				providerIdentifier: "cursor",
+				toolName: "StrReplace",
+				toolCallId: "sr1",
+				args: { path: target, old_string: "beta", new_string: "gamma" },
+				rawArgs: {},
+			}),
+		);
 
 		expect(await Bun.file(target).text()).toBe("alpha\ngamma\n");
 		expect(result.content.map(part => (part.type === "text" ? part.text : "")).join("")).not.toMatch(
@@ -661,14 +730,16 @@ describe("Cursor MCP StrReplace fallback", () => {
 			getToolContext: () => yoloToolContext(),
 		});
 
-		const result = await handlers.mcp({
-			name: "edit",
-			providerIdentifier: "pi-agent",
-			toolName: "edit",
-			toolCallId: "e-mix",
-			args: { path: target, old_text: "beta", new_text: "gamma" },
-			rawArgs: {},
-		});
+		const result = asToolResult(
+			await handlers.mcp({
+				name: "edit",
+				providerIdentifier: "pi-agent",
+				toolName: "edit",
+				toolCallId: "e-mix",
+				args: { path: target, old_text: "beta", new_text: "gamma" },
+				rawArgs: {},
+			}),
+		);
 
 		expect(await Bun.file(target).text()).toBe("alpha\ngamma\n");
 		expect(result.content.map(part => (part.type === "text" ? part.text : "")).join("")).not.toMatch(
@@ -709,14 +780,16 @@ describe("Cursor MCP StrReplace fallback", () => {
 			getEditReplaceTool: () => undefined,
 		});
 
-		const result = await handlers.mcp({
-			name: "StrReplace",
-			providerIdentifier: "cursor",
-			toolName: "StrReplace",
-			toolCallId: "sr-deny",
-			args: { path: target, old_string: "beta", new_string: "gamma" },
-			rawArgs: {},
-		});
+		const result = asToolResult(
+			await handlers.mcp({
+				name: "StrReplace",
+				providerIdentifier: "cursor",
+				toolName: "StrReplace",
+				toolCallId: "sr-deny",
+				args: { path: target, old_string: "beta", new_string: "gamma" },
+				rawArgs: {},
+			}),
+		);
 
 		expect(result.isError).toBe(true);
 		expect(await Bun.file(target).text()).toBe("alpha\nbeta\n");
@@ -742,28 +815,34 @@ describe("pi_bash timeout presence", () => {
 		// the command deadline". Folding a supplied `0` into `undefined` applies
 		// the 300s default, killing the long-running command that asked not to
 		// be killed.
-		const disabled = await handlers.piBash({
-			toolCallId: "b1",
-			args: { command: "echo hi", timeout: 0 },
-		} as never);
+		const disabled = asToolResult(
+			await handlers.piBash({
+				toolCallId: "b1",
+				args: { command: "echo hi", timeout: 0 },
+			} as never),
+		);
 		const disabledDetails = disabled.details as { timeoutDisabled?: boolean; timeoutSeconds?: number };
 		expect(disabledDetails.timeoutDisabled).toBe(true);
 		expect(disabledDetails.timeoutSeconds).toBeUndefined();
 
-		const defaulted = await handlers.piBash({
-			toolCallId: "b2",
-			args: { command: "echo hi" },
-		} as never);
+		const defaulted = asToolResult(
+			await handlers.piBash({
+				toolCallId: "b2",
+				args: { command: "echo hi" },
+			} as never),
+		);
 		const defaultedDetails = defaulted.details as { timeoutDisabled?: boolean; timeoutSeconds?: number };
 		expect(defaultedDetails.timeoutDisabled).toBeUndefined();
 		expect(defaultedDetails.timeoutSeconds).toBeGreaterThan(0);
 	});
 
 	it("passes a positive timeout through", async () => {
-		const result = await handlers.piBash({
-			toolCallId: "b3",
-			args: { command: "echo hi", timeout: 42 },
-		} as never);
+		const result = asToolResult(
+			await handlers.piBash({
+				toolCallId: "b3",
+				args: { command: "echo hi", timeout: 42 },
+			} as never),
+		);
 		expect((result.details as { timeoutSeconds?: number }).timeoutSeconds).toBe(42);
 	});
 
@@ -772,14 +851,18 @@ describe("pi_bash timeout presence", () => {
 		// its 1s floor — a command that dies almost immediately. Dropping it to
 		// the default is the only sane reading, so assert the default rather
 		// than merely "positive", which the clamp also satisfies.
-		const negative = await handlers.piBash({
-			toolCallId: "b4",
-			args: { command: "echo hi", timeout: -5 },
-		} as never);
-		const omitted = await handlers.piBash({
-			toolCallId: "b5",
-			args: { command: "echo hi" },
-		} as never);
+		const negative = asToolResult(
+			await handlers.piBash({
+				toolCallId: "b4",
+				args: { command: "echo hi", timeout: -5 },
+			} as never),
+		);
+		const omitted = asToolResult(
+			await handlers.piBash({
+				toolCallId: "b5",
+				args: { command: "echo hi" },
+			} as never),
+		);
 		const negativeDetails = negative.details as { timeoutDisabled?: boolean; timeoutSeconds?: number };
 		expect(negativeDetails.timeoutDisabled).toBeUndefined();
 		expect(negativeDetails.timeoutSeconds).toBe((omitted.details as { timeoutSeconds?: number }).timeoutSeconds);
@@ -804,12 +887,14 @@ describe("legacy shell timeout unit (issue #13082)", () => {
 		// Legacy `ShellArgs.timeout` is milliseconds (`ShellTimeout` echoes it as
 		// `timeout_ms`), so a model asking for 15s sends 15000. Forwarded as
 		// seconds it exceeded the bash ceiling and ran clamped to 3600s.
-		const result = await handlers.shell({
-			command: "echo hi",
-			workingDirectory: "",
-			timeout: 15_000,
-			toolCallId: "s1",
-		} as never);
+		const result = asToolResult(
+			await handlers.shell({
+				command: "echo hi",
+				workingDirectory: "",
+				timeout: 15_000,
+				toolCallId: "s1",
+			} as never),
+		);
 		// BashTool records its resolved deadline here; shape known from `bash.ts`.
 		const details = result.details as { timeoutSeconds?: number };
 		expect(details.timeoutSeconds).toBe(15);
@@ -818,25 +903,68 @@ describe("legacy shell timeout unit (issue #13082)", () => {
 	it("rounds a sub-second budget up and leaves an unset budget on the default", async () => {
 		// Truncating 400ms to 0 would read as `bash`'s "no deadline" instead of
 		// the shortest deadline it can honor.
-		const subSecond = await handlers.shell({
-			command: "echo hi",
-			workingDirectory: "",
-			timeout: 400,
-			toolCallId: "s2",
-		} as never);
+		const subSecond = asToolResult(
+			await handlers.shell({
+				command: "echo hi",
+				workingDirectory: "",
+				timeout: 400,
+				toolCallId: "s2",
+			} as never),
+		);
 		const subSecondDetails = subSecond.details as { timeoutDisabled?: boolean; timeoutSeconds?: number };
 		expect(subSecondDetails.timeoutSeconds).toBe(1);
 		expect(subSecondDetails.timeoutDisabled).toBeUndefined();
 
-		const unset = await handlers.shell({
-			command: "echo hi",
-			workingDirectory: "",
-			timeout: 0,
-			toolCallId: "s3",
-		} as never);
+		const unset = asToolResult(
+			await handlers.shell({
+				command: "echo hi",
+				workingDirectory: "",
+				timeout: 0,
+				toolCallId: "s3",
+			} as never),
+		);
 		const unsetDetails = unset.details as { timeoutDisabled?: boolean; timeoutSeconds?: number };
 		expect(unsetDetails.timeoutDisabled).toBeUndefined();
 		expect(unsetDetails.timeoutSeconds).toBeGreaterThan(1);
+	});
+});
+
+// Cursor's server advertises native tools (shell/grep/…) unconditionally, so a
+// restricted subagent (e.g. a read-only scout without `bash`) can still receive
+// the call. The bridge must answer with a policy rejection — not an error — so
+// the model treats it as declined instead of a broken environment and stops
+// retrying (composer-2.5 retry-spiral).
+describe("CursorExecHandlers ungranted native tools", () => {
+	it("rejects shell when bash is not granted, naming the granted tools", async () => {
+		const handlers = new CursorExecHandlers({
+			cwd: ".",
+			tools: new Map([
+				["read", { name: "read" } as AgentTool],
+				["grep", { name: "grep" } as AgentTool],
+			]),
+		});
+
+		const result = await handlers.shell(create(ShellArgsSchema, { toolCallId: "call-shell", command: "echo hi" }));
+
+		if (!("rejected" in result)) throw new Error("expected policy rejection");
+		expect(result.rejected).toContain('Tool "bash" is not granted');
+		expect(result.rejected).toContain("policy restriction");
+		expect(result.rejected).toContain("grep, read");
+		expect(result.toolResult?.isError).toBe(true);
+		expect(result.toolResult?.toolName).toBe("bash");
+		expect(result.toolResult?.toolCallId).toBe("call-shell");
+	});
+
+	it("rejects shellStream when bash is not granted", async () => {
+		const handlers = new CursorExecHandlers({ cwd: ".", tools: new Map() });
+
+		const result = await handlers.shellStream(
+			create(ShellArgsSchema, { toolCallId: "call-stream", command: "echo hi" }),
+			{ onStdout: () => {}, onStderr: () => {} },
+		);
+
+		if (!("rejected" in result)) throw new Error("expected policy rejection");
+		expect(result.rejected).toContain('Tool "bash" is not granted');
 	});
 });
 
@@ -861,7 +989,9 @@ describe("CursorExecHandlers error results", () => {
 			emitEvent: event => events.push(event),
 		});
 
-		const result = await handlers.read(create(ReadArgsSchema, { toolCallId: "call-read", path: "ignored" }));
+		const result = asToolResult(
+			await handlers.read(create(ReadArgsSchema, { toolCallId: "call-read", path: "ignored" })),
+		);
 		expect(result.isError).toBe(true);
 		expect(result.content).toEqual([{ type: "text", text: "Enriched recovery guidance" }]);
 		const end = events.find(event => event.type === "tool_execution_end");
@@ -877,12 +1007,11 @@ describe("CursorExecHandlers error results", () => {
 			emitEvent: event => events.push(event),
 		});
 
-		const result = await handlers.shellStream(
-			create(ShellArgsSchema, { toolCallId: "call-shell", command: "ignored" }),
-			{
+		const result = asToolResult(
+			await handlers.shellStream(create(ShellArgsSchema, { toolCallId: "call-shell", command: "ignored" }), {
 				onStdout: data => stdout.push(data),
 				onStderr: () => {},
-			},
+			}),
 		);
 		expect(result.isError).toBe(true);
 		expect(result.content).toEqual([{ type: "text", text: "Enriched recovery guidance" }]);
@@ -972,14 +1101,16 @@ describe("CursorExecHandlers mounted tool bridge", () => {
 			getExecutableTool: name => (name === mountedTool.name ? mountedTool : undefined),
 		});
 
-		const result = await handlers.mcp({
-			name: mountedTool.name,
-			providerIdentifier: "pi-agent",
-			toolName: mountedTool.name,
-			toolCallId: "call-mounted",
-			args: {},
-			rawArgs: {},
-		});
+		const result = asToolResult(
+			await handlers.mcp({
+				name: mountedTool.name,
+				providerIdentifier: "pi-agent",
+				toolName: mountedTool.name,
+				toolCallId: "call-mounted",
+				args: {},
+				rawArgs: {},
+			}),
+		);
 
 		expect(result.isError).toBe(false);
 		expect(result.content).toEqual([{ type: "text", text: "reported" }]);
@@ -1013,14 +1144,16 @@ describe("CursorExecHandlers mounted tool bridge", () => {
 			getToolContext: () => ({ settings }) as AgentToolContext,
 		});
 
-		const result = await handlers.mcp({
-			name: device.name,
-			providerIdentifier: "pi-agent",
-			toolName: device.name,
-			toolCallId: "call-denied",
-			args: {},
-			rawArgs: {},
-		});
+		const result = asToolResult(
+			await handlers.mcp({
+				name: device.name,
+				providerIdentifier: "pi-agent",
+				toolName: device.name,
+				toolCallId: "call-denied",
+				args: {},
+				rawArgs: {},
+			}),
+		);
 
 		expect(result.isError).toBe(true);
 		expect(executed).toBe(false);
@@ -1591,8 +1724,9 @@ describe("CursorExecHandlers native delete gating (issue #5680)", () => {
 
 		const result = await handlers.delete(create(DeleteArgsSchema, { toolCallId: "call-del", path: target }));
 
-		expect(result.isError).toBe(true);
-		expect(result.content).toEqual([{ type: "text", text: 'Tool "delete" not available' }]);
+		if (!("rejected" in result)) throw new Error("expected policy rejection");
+		expect(result.rejected).toContain("not permitted");
+		expect(result.toolResult?.isError).toBe(true);
 		expect(await Bun.file(target).exists()).toBe(true);
 	});
 
@@ -1606,7 +1740,9 @@ describe("CursorExecHandlers native delete gating (issue #5680)", () => {
 			getToolContext: () => yoloToolContext(),
 		});
 
-		const result = await handlers.delete(create(DeleteArgsSchema, { toolCallId: "call-del", path: target }));
+		const result = asToolResult(
+			await handlers.delete(create(DeleteArgsSchema, { toolCallId: "call-del", path: target })),
+		);
 
 		expect(result.isError).toBe(false);
 		expect(await Bun.file(target).exists()).toBe(false);
@@ -1622,7 +1758,7 @@ describe("CursorExecHandlers native delete gating (issue #5680)", () => {
 		for (const content of ["café", ""]) {
 			const target = path.join(cwd, "size.txt");
 			await Bun.write(target, content);
-			const result = await handlers.delete(create(DeleteArgsSchema, { path: target }));
+			const result = asToolResult(await handlers.delete(create(DeleteArgsSchema, { path: target })));
 			expect(result.isError).toBe(false);
 			expect(result.details).toEqual({ fileSize: Buffer.byteLength(content) });
 			expect(await Bun.file(target).exists()).toBe(false);
@@ -1641,11 +1777,15 @@ describe("CursorExecHandlers native delete gating (issue #5680)", () => {
 		});
 
 		const denied = await handlers.delete(create(DeleteArgsSchema, { toolCallId: "call-del-denied", path: target }));
-		expect(denied.isError).toBe(true);
+		if (!("rejected" in denied)) throw new Error("expected policy rejection");
+		expect(denied.rejected).toContain("not permitted");
+		expect(denied.toolResult?.isError).toBe(true);
 		expect(await Bun.file(target).exists()).toBe(true);
 
 		mutationGranted = true;
-		const allowed = await handlers.delete(create(DeleteArgsSchema, { toolCallId: "call-del-allowed", path: target }));
+		const allowed = asToolResult(
+			await handlers.delete(create(DeleteArgsSchema, { toolCallId: "call-del-allowed", path: target })),
+		);
 		expect(allowed.isError).toBe(false);
 		expect(await Bun.file(target).exists()).toBe(false);
 	});
@@ -1667,7 +1807,9 @@ describe("CursorExecHandlers native delete gating (issue #5680)", () => {
 		});
 
 		currentCwd = movedCwd;
-		const result = await handlers.delete(create(DeleteArgsSchema, { toolCallId: "call-del", path: "obsolete.txt" }));
+		const result = asToolResult(
+			await handlers.delete(create(DeleteArgsSchema, { toolCallId: "call-del", path: "obsolete.txt" })),
+		);
 
 		expect(result.isError).toBe(false);
 		expect(await Bun.file(originalTarget).exists()).toBe(true);
@@ -1689,11 +1831,12 @@ describe("CursorExecHandlers native delete gating (issue #5680)", () => {
 			getToolContext: () => ({ settings }) as AgentToolContext,
 		});
 
-		const result = await handlers.delete(
-			create(DeleteArgsSchema, { toolCallId: "call-deny", path: "protected.txt" }),
+		const result = asRejection(
+			await handlers.delete(create(DeleteArgsSchema, { toolCallId: "call-deny", path: "protected.txt" })),
 		);
 
-		expect(result.isError).toBe(true);
+		expect(result.rejected).toContain("blocked by user policy");
+		expect(result.rejected).toContain("do not retry");
 		expect(await Bun.file(target).exists()).toBe(true);
 	});
 
@@ -1710,9 +1853,12 @@ describe("CursorExecHandlers native delete gating (issue #5680)", () => {
 			getToolContext: () => ({ settings }) as AgentToolContext,
 		});
 
-		const result = await handlers.delete(create(DeleteArgsSchema, { toolCallId: "call-ask", path: "asked.txt" }));
+		const result = asRejection(
+			await handlers.delete(create(DeleteArgsSchema, { toolCallId: "call-ask", path: "asked.txt" })),
+		);
 
-		expect(result.isError).toBe(true);
+		expect(result.rejected).toContain("requires approval");
+		expect(result.rejected).toContain("do not retry");
 		expect(await Bun.file(target).exists()).toBe(true);
 	});
 
@@ -1725,12 +1871,12 @@ describe("CursorExecHandlers native delete gating (issue #5680)", () => {
 			allowDirectFileMutation: true,
 		});
 
-		const result = await handlers.delete(
-			create(DeleteArgsSchema, { toolCallId: "call-unwired", path: "unwired.txt" }),
+		const result = asRejection(
+			await handlers.delete(create(DeleteArgsSchema, { toolCallId: "call-unwired", path: "unwired.txt" })),
 		);
 
-		expect(result.isError).toBe(true);
-		expect(result.content.map(c => (c.type === "text" ? c.text : "")).join("")).toContain("requires approval");
+		expect(result.rejected).toContain("requires approval");
+		expect(result.rejected).toContain("do not retry");
 		expect(await Bun.file(target).exists()).toBe(true);
 	});
 });
@@ -1924,7 +2070,9 @@ describe("CursorExecHandlers Pi frame translation", () => {
 		// return the entire file — the opposite of what was asked.
 		const { handlers, calls } = recordingHandlers("read");
 
-		const result = await handlers.piRead({ toolCallId: "c1", args: { path: "a.ts", limit: 0 } } as never);
+		const result = asToolResult(
+			await handlers.piRead({ toolCallId: "c1", args: { path: "a.ts", limit: 0 } } as never),
+		);
 
 		expect(calls).toEqual([]);
 		expect(result.isError).toBe(false);
@@ -1974,10 +2122,12 @@ describe("CursorExecHandlers Pi frame translation", () => {
 				tools: new Map<string, Tool>([["read", new ReadTool(createTestSession(cwd))]]),
 			});
 
-			const result = await handlers.piRead({
-				toolCallId: "c1",
-				args: { path: "n.txt", offset: 5, limit: 20 },
-			} as never);
+			const result = asToolResult(
+				await handlers.piRead({
+					toolCallId: "c1",
+					args: { path: "n.txt", offset: 5, limit: 20 },
+				} as never),
+			);
 			const text = result.content
 				.filter(part => part.type === "text")
 				.map(part => (part as { text: string }).text)
@@ -1997,19 +2147,23 @@ describe("CursorExecHandlers Pi frame translation", () => {
 			cwd,
 			tools: new Map<string, Tool>([["read", new ReadTool(session)]]),
 		});
-		const legacy = await handlers.read(create(ReadArgsSchema, { path: target, offset: -4, limit: 2 }));
-		const modern = await handlers.piRead({
-			toolCallId: "negative-read",
-			args: { path: "long.txt", offset: -4, limit: 2 },
-		} as never);
+		const legacy = asToolResult(await handlers.read(create(ReadArgsSchema, { path: target, offset: -4, limit: 2 })));
+		const modern = asToolResult(
+			await handlers.piRead({
+				toolCallId: "negative-read",
+				args: { path: "long.txt", offset: -4, limit: 2 },
+			} as never),
+		);
 		for (const result of [legacy, modern]) {
 			expect(result.isError).toBe(false);
 			expect(result.content).toEqual([{ type: "text", text: "line997\nline998" }]);
 		}
-		const last = await handlers.piRead({
-			toolCallId: "last-line",
-			args: { path: "long.txt", offset: -1 },
-		} as never);
+		const last = asToolResult(
+			await handlers.piRead({
+				toolCallId: "last-line",
+				args: { path: "long.txt", offset: -1 },
+			} as never),
+		);
 		expect(last.isError).toBe(false);
 		expect(
 			last.content
