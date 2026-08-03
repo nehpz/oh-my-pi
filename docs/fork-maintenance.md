@@ -98,6 +98,29 @@ For any future local change:
 
 <!-- Appended by scripts/sync-upstream.ts; newest first. -->
 
+### 2026-08-03 — post-v17.2.5 restack (npm-only native syncs)
+
+- dropped `build(natives): keep local Bazel builds working on macOS 27` (macOS 27 Bazel toolchain overlay: MODULE.bazel, crates/pi-natives/BUILD.bazel, crates/pi-shell/src/process.rs let-chain refactor) — build-time only, unnecessary under npm-mode syncs
+- dropped `build(natives): refresh Bazel lock for v17.2.5` — generated lock only existed to match the retired overlay
+- reverted the fork's `export` flip in `packages/natives/scripts/gen-npm-packages.ts`; `expectedAddonFilenames` is now inlined in `scripts/sync-upstream.ts`
+- `.gitignore` is now a fork-record file, so `chore(dev)` config commits retain silently during supersession review
+- removed dead classifier hatches (`isToolchainOverlay`, `isExpectedFilenameExportOnly`); native impact classification stays fail-closed
+- root cause of the clippy pressure behind the retired process.rs refactor: a stale `rustup override` (bare `nightly`, 2026-02-26 build) on the main checkout shadowed `rust-toolchain.toml`'s `nightly-2026-07-28` pin; the override was removed and the pinned toolchain passes `check:rs` on unmodified upstream code
+- net effect: no retained patch touches native contract paths; auto native mode resolves npm; rollback tag `fork/pre-restack-v17.2.5`
+
+### 2026-08-03 — v17.2.4 → v17.2.5
+
+- kept 8c8a68b41 feat(ai): enforce Cursor execution policy rejections
+- kept 21c3e6fb2 fix(ai,coding-agent): normalize gateway model catalog metadata
+- kept 4b4d53920 chore(dev): preserve fork-local development configuration
+- kept a739d2eb8 fix(natives): diagnose and safely promote workspace addons
+- kept 58b9f4d73 build(natives): keep local Bazel builds working on macOS 27
+- kept 7ad02557a chore(fork): automate parentless syncs with verified npm natives
+- kept 4474715e2 build(natives): refresh Bazel lock for v17.2.5
+- note: 4b4d53920 chore(dev): preserve fork-local development configuration (no owned tests — manual review)
+- note: 58b9f4d73 build(natives): keep local Bazel builds working on macOS 27 (no owned tests — manual review)
+- note: 4474715e2 build(natives): refresh Bazel lock for v17.2.5 (no owned tests — manual review)
+
 ### 2026-08-02 — v17.2.2 → v17.2.4
 
 - kept 346ee517e feat(ai): introduce policy rejections for exec handlers
