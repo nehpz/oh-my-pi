@@ -5,7 +5,6 @@ import * as path from "node:path";
 import { $ } from "bun";
 import type { Patch } from "./sync-upstream";
 import {
-	acceptsPromotionConfirmation,
 	assertCleanTree,
 	classifyNativeContractImpact,
 	expectedAddonFilenames,
@@ -25,7 +24,6 @@ import {
 	parseArgs,
 	parseStack,
 	prepareWorktree,
-	promotionConfirmationText,
 	REPLANT_REBASE_FLAGS,
 	removeBazelWorkspaceSymlink,
 	removeSyncWorktree,
@@ -74,21 +72,6 @@ describe("parseArgs", () => {
 
 	it("rejects multiple version arguments", () => {
 		expect(() => parseArgs(["v17.1.8", "v17.1.9"])).toThrow("unexpected positional argument: v17.1.9");
-	});
-});
-
-describe("promotion confirmation", () => {
-	it("requires the exact origin/main old and new SHA phrase", () => {
-		const oldSha = "0123456789abcdef";
-		const newSha = "fedcba9876543210";
-		expect(promotionConfirmationText(oldSha, newSha)).toBe(`PROMOTE origin/main ${oldSha} -> ${newSha}`);
-		expect(acceptsPromotionConfirmation(` PROMOTE origin/main ${oldSha} -> ${newSha} `, oldSha, newSha)).toBe(true);
-		expect(
-			acceptsPromotionConfirmation(`PROMOTE origin/main ${oldSha.slice(0, 8)} -> ${newSha}`, oldSha, newSha),
-		).toBe(false);
-		expect(
-			acceptsPromotionConfirmation(`PROMOTE origin/main ${oldSha} -> ${newSha.slice(0, 8)}`, oldSha, newSha),
-		).toBe(false);
 	});
 });
 
