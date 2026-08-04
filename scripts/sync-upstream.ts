@@ -1108,14 +1108,6 @@ export async function verify(version: string, worktreeDir: string = worktreePath
 	console.log("verification passed");
 }
 
-export function promotionConfirmationText(originMainSha: string, syncHead: string): string {
-	return `PROMOTE origin/main ${originMainSha} -> ${syncHead}`;
-}
-
-export function acceptsPromotionConfirmation(input: string, originMainSha: string, syncHead: string): boolean {
-	return input.trim() === promotionConfirmationText(originMainSha, syncHead);
-}
-
 async function promote(version: string): Promise<void> {
 	const status = await git(["status", "--porcelain"]).quiet();
 	assertCleanTree(status.text());
@@ -1134,17 +1126,7 @@ async function promote(version: string): Promise<void> {
 		await fs.rm(stagedNativeRoot, { recursive: true, force: true });
 		throw err;
 	}
-	const confirmation = promotionConfirmationText(originMainSha, syncHead);
-	const answer = prompt(`Type ${confirmation} to push:`);
-	if (!answer || !acceptsPromotionConfirmation(answer, originMainSha, syncHead)) {
-		await Promise.all([
-			fs.rm(stagedNativeRoot, { recursive: true, force: true }),
-			fs.rm(rollbackNativeRoot, { recursive: true, force: true }),
-		]);
-		throw new Error("promotion cancelled: exact origin/main old/new confirmation was not supplied");
-	}
-
-	console.log(`promoting main -> ${syncHead.slice(0, 9)} (verified sync head)`);
+	console.log(`promoting main ${originMainSha.slice(0, 9)} -> ${syncHead.slice(0, 9)} (verified sync head)`);
 	await removeSyncWorktree();
 	try {
 		await git(["reset", "--hard", syncHead]).quiet();
