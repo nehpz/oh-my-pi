@@ -1,0 +1,14 @@
+# Fork-local: unify the Mnemopi memory bank across git worktrees.
+#
+# Default `per-project` scoping derives the bank as
+# `basename(cwd)-Bun.hash(cwd)`, so every linked worktree
+# (e.g. ../oh-my-pi-sync) starts with an empty memory bank.
+# `global` scoping uses the configured bank name verbatim — and since this
+# file is committed, every worktree of this repo resolves the same bank.
+#
+# The bank name below is intentionally the pre-existing per-project bank id
+# for /Users/stephen/Projects/nehpz/oh-my-pi, so all previously accumulated
+# memories stay visible without migration.
+mnemopi:
+  scoping: global
+  bank: oh-my-pi-12d0jdo3j4yd1
