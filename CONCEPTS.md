@@ -14,7 +14,10 @@ The fork's entire delta from upstream, kept as a linear sequence of self-contain
 One self-contained commit in the Patch Stack. A Patch carries its intent in its commit message (detailed enough to re-implement the change from the message alone) and owns the tests that prove its behavior — those tests double as its Supersession contract. Patches never edit upstream changelog files.
 
 ### Replant
-The sync operation: rebasing the Patch Stack from the old Upstream Snapshot onto a new one. A Replant runs in an isolated worktree so the production checkout never sits mid-rebase, and finishes with Promotion only after verification passes.
+The sync operation: rebasing the Patch Stack from the old Upstream Snapshot onto a new one. A Replant runs in the Sync Worktree so the production checkout never sits mid-rebase, and finishes with Promotion only after verification passes.
+
+### Sync Worktree
+The disposable, sync-owned checkout a Replant runs in, separate from the production checkout. It exists only between the start of a Replant and Promotion; the sync owns its entire lifecycle and may destroy it at any time, so nothing durable belongs inside it. A directory left at its path that git no longer registers as a worktree is a stale remnant — cleared automatically before the next Replant unless it contains a `.git` entry, in which case the sync stops rather than risk deleting a real checkout. Long-lived tool sessions must not keep their working directory inside it: they recreate runtime state there after removal, which is what produces stale remnants.
 
 ### Promotion
 Moving the fork's mainline to the verified replanted head and force-pushing it. Promotion cannot be a fast-forward — snapshots are unrelated histories — so it is an explicit pointer move, made atomic by doing all verification beforehand.
