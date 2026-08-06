@@ -7,6 +7,7 @@ import type { Patch } from "./sync-upstream";
 import {
 	assertCleanTree,
 	classifyNativeContractImpact,
+	clearStaleWorktreeDirectory,
 	expectedAddonFilenames,
 	formatConflictReport,
 	getStagedNativeAddonPath,
@@ -686,6 +687,28 @@ describe("phase skip and native addon contracts", () => {
 			expect((await $`git worktree list --porcelain`.cwd(dir).quiet()).text()).not.toContain(worktreeDir);
 		} finally {
 			await $`git worktree remove --force --force ${worktreeDir}`.cwd(dir).quiet().nothrow();
+			await fs.rm(dir, { recursive: true, force: true });
+		}
+	});
+
+	it("clears a stale unregistered directory but refuses one holding a .git entry", async () => {
+		const dir = await fs.mkdtemp(path.join(os.tmpdir(), "sync-upstream-stale-dir-"));
+		const staleDir = path.join(dir, "sync");
+		try {
+			// Missing path is a no-op.
+			await clearStaleWorktreeDirectory(staleDir);
+
+			// Leftover junk (e.g. a recreated .omp/) is removed.
+			await fs.mkdir(path.join(staleDir, ".omp"), { recursive: true });
+			await clearStaleWorktreeDirectory(staleDir);
+			await expect(fs.stat(staleDir)).rejects.toMatchObject({ code: "ENOENT" });
+
+			// A directory with a .git entry is never clobbered.
+			await fs.mkdir(staleDir, { recursive: true });
+			await Bun.write(path.join(staleDir, ".git"), "gitdir: elsewhere");
+			await expect(clearStaleWorktreeDirectory(staleDir)).rejects.toThrow(/not a registered worktree/);
+			expect(await Bun.file(path.join(staleDir, ".git")).text()).toBe("gitdir: elsewhere");
+		} finally {
 			await fs.rm(dir, { recursive: true, force: true });
 		}
 	});

@@ -457,6 +457,30 @@ export async function removeSyncWorktree(
 	await git(["worktree", "remove", "--force", "--force", worktreeDir], repositoryRoot).quiet();
 }
 
+/**
+ * Remove a leftover directory at the sync worktree path that git no longer
+ * registers as a worktree (e.g. recreated by a lingering process after
+ * worktree removal). Refuses to clobber anything holding a `.git` entry.
+ */
+export async function clearStaleWorktreeDirectory(worktreeDir: string = worktreePath): Promise<void> {
+	const exists = await fs.stat(worktreeDir).then(
+		() => true,
+		() => false,
+	);
+	if (!exists) return;
+	const hasGit = await fs.stat(path.resolve(worktreeDir, ".git")).then(
+		() => true,
+		() => false,
+	);
+	if (hasGit) {
+		throw new Error(
+			`${worktreeDir} exists with a .git entry but is not a registered worktree of this repository — inspect and remove it manually, then re-run`,
+		);
+	}
+	console.log(`removing stale directory at ${worktreeDir} (not a registered worktree)`);
+	await fs.rm(worktreeDir, { recursive: true, force: true });
+}
+
 async function partitionReplantStack(stack: Patch[]): Promise<{ retained: Patch[]; generatedLockRefreshes: Patch[] }> {
 	const classified = await Promise.all(
 		stack.map(async patch => ({
@@ -486,6 +510,7 @@ async function replant(version: string, baseTag: string): Promise<void> {
 	if (await worktreeExists()) {
 		console.log(`sync worktree already exists at ${worktreePath} (resuming)`);
 	} else {
+		await clearStaleWorktreeDirectory();
 		await git(["worktree", "add", "-B", syncBranch, worktreePath, "main"]).quiet();
 		console.log(`created sync worktree at ${worktreePath} on ${syncBranch}`);
 	}
