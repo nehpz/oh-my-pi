@@ -26,6 +26,7 @@ This repo contains multiple packages, but **`packages/coding-agent/`** is the pr
 ## Knowledge Store
 
 - `docs/solutions/` — documented solutions to past problems (bugs, workflow patterns, best practices), organized by category with YAML frontmatter (`module`, `tags`, `problem_type`). Relevant when implementing or debugging in documented areas.
+- `docs/solutions/decisions/` — durable adoption/POV decision records (e.g. reject/adopt verdicts on external tools). When a verdict is already structured, write the file directly with the standard frontmatter — do not run the ce-compound pipeline for pre-structured content; it is only warranted when the lesson must be extracted from a raw session transcript.
 - `CONCEPTS.md` — shared domain vocabulary (entities, named processes, status concepts). Relevant when orienting to the codebase or discussing domain concepts.
 
 ## GitHub
