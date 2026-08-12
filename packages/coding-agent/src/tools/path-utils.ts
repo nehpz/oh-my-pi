@@ -629,10 +629,17 @@ export function resolveToCwd(filePath: string, cwd: string): string {
  *
  * The lexical check alone is not containment: a symlink inside the workspace
  * can point anywhere, so `out/config` under a `ws/out -> /elsewhere` link is
- * relative, `..`-free, and still writes outside. Both the target and its
- * deepest existing ancestor are therefore realpath-resolved — the ancestor
- * because a download names a file that does not exist yet, so the link in its
- * path is the only thing that can be resolved before the write.
+ * relative, `..`-free, and still writes outside. The target (when itself a
+ * symlink) and its deepest existing ancestor are therefore realpath-resolved —
+ * the ancestor because a download names a file that does not exist yet, so the
+ * link in its path is the only thing that can be resolved before the write.
+ *
+ * A non-symlink target is never realpath-resolved. A hard link shares an inode
+ * but does not relocate the path being written, and macOS realpath (backed by
+ * `fcntl(F_GETPATH)`) may return ANY name of a multi-link inode — whichever
+ * the vnode cache holds, nondeterministically the one outside the workspace.
+ * Its containment is decided by its parent directory instead; directories
+ * cannot be hard-linked, so that resolution is deterministic.
  *
  * The cwd itself is rejected: a download names a file, never the directory.
  */
@@ -651,22 +658,25 @@ export function confineToWorkspace(filePath: string, cwd: string): string | null
 	const realRoot = tryRealpath(root);
 	if (!realRoot) return null;
 
-	// An existing target is authoritative: resolve it outright.
-	const realTarget = tryRealpath(resolved);
-	if (realTarget) return isUnderRootLexical(realTarget, realRoot) ? resolved : null;
-
-	// `realpath` also fails on a *dangling* link, and a write follows that link
-	// to wherever it points. Chasing the chain to decide would mean
+	// A symlink is the one final component that relocates the write: resolve
+	// it outright. `realpath` fails on a *dangling* link, and a write follows
+	// that link to wherever it points. Chasing the chain to decide would mean
 	// reimplementing symlink resolution (multi-hop, relative hops, loops, and
 	// a TOCTOU window against a link that can be re-pointed between the check
 	// and the write). A download names a file to create, so a path that is
 	// already an unresolvable link is refused outright — the one shape where
 	// "cannot tell where this lands" is the whole answer.
-	if (isSymlink(resolved)) return null;
+	if (isSymlink(resolved)) {
+		const realTarget = tryRealpath(resolved);
+		return realTarget && isUnderRootLexical(realTarget, realRoot) ? resolved : null;
+	}
 
-	// Otherwise walk up to the deepest ancestor that does exist and check that,
-	// then re-apply the segments below it. Those segments are `..`-free by the
-	// lexical check above, so they cannot climb back out.
+	// Any other final component — existing or not — lives wherever its parent
+	// directory really is, so the final component itself is never
+	// realpath-resolved (see the hard-link note above). Walk up to the deepest
+	// ancestor that does exist and check that, then re-apply the segments
+	// below it. Those segments are `..`-free by the lexical check above, so
+	// they cannot climb back out.
 	let ancestor = path.dirname(resolved);
 	const tail: string[] = [path.basename(resolved)];
 	for (;;) {
