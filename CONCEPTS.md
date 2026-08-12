@@ -48,6 +48,14 @@ A Replant state where the rebased code is syntactically valid but an upstream ch
 ### Sync Log
 The append-only record of each sync — base transition, per-Patch outcome, retirements and re-implementations — kept in the fork-maintenance runbook and committed as part of the Patch Stack.
 
+## Download Safety
+
+### Workspace Containment
+The path-level decision that a peer-supplied relative path resolves inside the live workspace, made before any filesystem write. Only a symlink can relocate a path, so a symlink target is resolved outright while every other target is judged by its real parent directory — a hard link shares file contents but never moves the path being written. A path whose destination cannot be determined (a dangling link) is refused outright.
+
+### Write Guard
+The handle-level checks that run after Workspace Containment accepts a path: the write opens without following links, refuses non-regular files, and refuses an inode with more than one name. It exists because Containment sees only paths — a race that swaps the target, or an inode shared with a file elsewhere, is visible only on the opened handle. A refusal here is the intended outcome for hard-link targets; Containment rejecting them instead signals nondeterministic path resolution.
+
 ## Native Addon Loading
 
 ### Version Sentinel
