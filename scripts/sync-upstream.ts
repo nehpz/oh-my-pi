@@ -1021,9 +1021,27 @@ export async function supersessionCheck(
 		try {
 			console.log("supersession: preparing bare upstream probe environment...");
 			await $`bun install --frozen-lockfile`.cwd(probePath).quiet();
-			const acquired = await acquireNpmNativeAddon(version);
-			acquiredSourceRoot = acquired.sourceRoot;
-			if (!acquiredSourceRoot) throw new Error("npm supersession probe acquisition did not produce a source root");
+			try {
+				const acquired = await acquireNpmNativeAddon(version);
+				acquiredSourceRoot = acquired.sourceRoot;
+				if (!acquiredSourceRoot)
+					throw new Error("npm supersession probe acquisition did not produce a source root");
+			} catch (err) {
+				// npm publish can lag the upstream git tag; fall back to building the
+				// tag's own natives from source, mirroring bazel-mode preparation.
+				console.log(
+					`supersession: npm natives for ${version} unavailable (${err instanceof Error ? err.message : String(err)}); building from probe source via bazel`,
+				);
+				acquiredSourceRoot = await fs.mkdtemp(path.join(os.tmpdir(), "omp-sync-bazel-source-"));
+				const destination = path.resolve(acquiredSourceRoot, NATIVE_RELATIVE_DIR);
+				try {
+					await $`bun ${path.join(probePath, "scripts", "bazel-natives.ts")} host --dest ${destination}`
+						.cwd(probePath)
+						.quiet();
+				} finally {
+					await removeBazelWorkspaceSymlink(probePath);
+				}
+			}
 			await installVerifiedNativeAddon(acquiredSourceRoot, probePath);
 			for (const { patch, tests } of patchesToProbe) {
 				await git(["reset", "--hard", upstreamTag(version)], probePath).quiet();
