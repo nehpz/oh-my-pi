@@ -5,7 +5,7 @@ import * as path from "node:path";
 import { clearCustomApis } from "@oh-my-pi/pi-ai/api-registry";
 import { startAuthGateway } from "@oh-my-pi/pi-ai/auth-gateway";
 import { AuthStorage } from "@oh-my-pi/pi-ai/auth-storage";
-import { createMockModel, registerMockApi } from "@oh-my-pi/pi-ai/providers/mock";
+import { createMockModel, type MockModel, registerMockApi } from "@oh-my-pi/pi-ai/providers/mock";
 
 afterEach(() => {
 	clearCustomApis();
@@ -65,6 +65,47 @@ describe("auth-gateway GET /v1/models", () => {
 				context_length: 1_000_000,
 				max_tokens: 32_768,
 			});
+		} finally {
+			await handle.close();
+			storage.close();
+			await fs.rm(dir, { recursive: true, force: true });
+		}
+	});
+
+	it("emits context_length and max_tokens as null when the catalog has no figure", async () => {
+		// Regression: the sync health check requires every row to carry the
+		// `context_length` key (number or null); conditional emission dropped it
+		// for models without a known window.
+		registerMockApi();
+		const dir = await fs.mkdtemp(path.join(os.tmpdir(), "gw-models-list-null-"));
+		const storage = await AuthStorage.create(path.join(dir, "auth.db"));
+		storage.setRuntimeApiKey("openrouter", "test-key");
+		const gamma = {
+			...createMockModel({ provider: "openrouter", id: "gamma" }).model,
+			contextWindow: undefined,
+			maxTokens: undefined,
+		} as unknown as MockModel;
+		const handle = startAuthGateway({
+			bind: "127.0.0.1:0",
+			bearerTokens: ["t"],
+			storage,
+			resolveModel: () => gamma,
+			listModels: () => [gamma],
+			version: "test",
+		});
+		try {
+			const res = await fetch(`${handle.url}/v1/models`, {
+				headers: { Authorization: "Bearer t" },
+			});
+			expect(res.status).toBe(200);
+			const body = (await res.json()) as { data: Array<Record<string, unknown>> };
+			expect(body.data).toHaveLength(1);
+			const entry = body.data[0] as Record<string, unknown>;
+			expect("context_length" in entry).toBe(true);
+			expect("max_tokens" in entry).toBe(true);
+			expect(entry.context_length).toBeNull();
+			expect(entry.max_tokens).toBeNull();
+			expect("max_output_tokens" in entry).toBe(false);
 		} finally {
 			await handle.close();
 			storage.close();
