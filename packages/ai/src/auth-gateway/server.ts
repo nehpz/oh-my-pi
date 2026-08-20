@@ -722,9 +722,11 @@ async function handleCredentialsCheck(storage: AuthStorage, signal: AbortSignal)
  * Row shape for `GET /v1/models`. Beyond the OpenAI-standard `id`/`object`/
  * `owned_by`, rows advertise the catalog metadata OpenAI-compatible clients
  * (omp's own proxy discovery, Zed's openai_compatible provider, ...) read to
- * size and capability-gate discovered models: `context_length`,
- * `max_output_tokens`, `input_modalities`, and `supports_tools` (only emitted
- * when the catalog explicitly reports `false`; absent means usable). `kind` is
+ * size and capability-gate discovered models: `context_length` and
+ * `max_tokens` (always present, `null` when the catalog has no figure — the
+ * sync health check requires the key), `max_output_tokens`,
+ * `input_modalities`, and `supports_tools` (only emitted when the catalog
+ * explicitly reports `false`; absent means usable). `kind` is
  * emitted for non-chat rows (`judge`, `image`, `tts`, `stt`, `embedding`,
  * `rerank`, `video`) so clients can keep them off chat routes; absent means chat.
  * `max_tokens` mirrors `max_output_tokens` under the fallback name our own
@@ -738,9 +740,9 @@ interface ModelListRow {
 	api: Api;
 	kind?: ModelKind;
 	display_name: string;
-	context_length?: number;
+	context_length: number | null;
 	max_output_tokens?: number;
-	max_tokens?: number;
+	max_tokens: number | null;
 	input_modalities: ("text" | "image")[];
 	supports_tools?: boolean;
 }
@@ -758,14 +760,12 @@ function handleModelsList(opts: AuthGatewayBootOptions): Response {
 			owned_by: model.provider,
 			api: model.api,
 			display_name: model.name,
+			context_length: model.contextWindow ?? null,
+			max_tokens: model.maxTokens ?? null,
 			input_modalities: model.input,
 		};
 		if (modelKind(model) !== "chat") row.kind = modelKind(model);
-		if (model.contextWindow != null) row.context_length = model.contextWindow;
-		if (model.maxTokens != null) {
-			row.max_output_tokens = model.maxTokens;
-			row.max_tokens = model.maxTokens;
-		}
+		if (model.maxTokens != null) row.max_output_tokens = model.maxTokens;
 		if (model.supportsTools === false) row.supports_tools = false;
 		data.push(row);
 	}
