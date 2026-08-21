@@ -7,6 +7,8 @@ import type { Patch } from "./sync-upstream";
 import {
 	assertCleanTree,
 	classifyNativeContractImpact,
+	classifyNoTestsPatch,
+	classifyNpmNativeAcquisitionError,
 	clearStaleWorktreeDirectory,
 	expectedAddonFilenames,
 	formatConflictReport,
@@ -18,17 +20,21 @@ import {
 	isGeneratedLockRefreshPatch,
 	isRecordFile,
 	isTrackedClean,
+	loadCommittedRetainedLedger,
 	loadProgress,
+	loadRetainedLedger,
 	nativeVariantForAddonFilename,
 	normalizeVersion,
 	parseArgs,
 	parseStack,
 	prepareWorktree,
 	REPLANT_REBASE_FLAGS,
+	RETAINED_LEDGER_RELATIVE,
 	removeBazelWorkspaceSymlink,
 	removeSyncWorktree,
 	rewriteRebaseTodo,
 	saveProgress,
+	saveRetainedLedger,
 	sequenceEditorCommand,
 	stageVerifiedNativeAddon,
 	supersessionCheck,
@@ -520,6 +526,7 @@ describe("fork record classification", () => {
 		expect(isRecordFile(".omp/logs/omp.log")).toBe(true);
 		expect(isRecordFile(".compound-engineering/spec.md")).toBe(true);
 		expect(isRecordFile(".gitignore")).toBe(true);
+		expect(isRecordFile("scripts/sync-upstream-retained.json")).toBe(true);
 
 		expect(isRecordFile("LICENSE")).toBe(false);
 		expect(isRecordFile("scripts/sync-upstream.ts")).toBe(false);
@@ -536,6 +543,99 @@ describe("fork record classification", () => {
 
 		expect(isForkRecordPatch(["docs/note.md", "scripts/sync-upstream.ts"])).toBe(false);
 		expect(isForkRecordPatch([])).toBe(false);
+	});
+});
+
+describe("retained ledger no-tests classification", () => {
+	const patchId = "00a0e90f95ada4778ef7492f02c922acb28b281d";
+	const codeFiles = ["scripts/sync-upstream.ts"];
+	const recordFiles = ["docs/fork-maintenance.md"];
+	const ledger = {
+		[patchId]: {
+			subject: "fix(sync): fall back to bazel-built natives when npm publish lags the upstream tag",
+			reason: "script-only sync tooling fix; fallback decision logic now covered by tests",
+			date: "2026-08-21",
+		},
+	};
+
+	it("treats a no-tests non-record patch as ledger-retained when its patch-id is present", () => {
+		expect(classifyNoTestsPatch(codeFiles, patchId, ledger)).toBe("ledger-retained");
+	});
+
+	it("treats a no-tests non-record patch as manual-review when the ledger is empty", () => {
+		expect(classifyNoTestsPatch(codeFiles, patchId, {})).toBe("manual-review");
+	});
+
+	it("treats a record-only diff as a fork record regardless of the ledger", () => {
+		expect(classifyNoTestsPatch(recordFiles, patchId, ledger)).toBe("fork-record");
+		expect(classifyNoTestsPatch(recordFiles, patchId, {})).toBe("fork-record");
+	});
+
+	it("returns an empty ledger when the retained file is missing", async () => {
+		const dir = await fs.mkdtemp(path.join(os.tmpdir(), "sync-upstream-ledger-"));
+		try {
+			expect(await loadRetainedLedger(dir)).toEqual({});
+		} finally {
+			await fs.rm(dir, { recursive: true, force: true });
+		}
+	});
+
+	it("classification reads only the committed ledger, ignoring uncommitted working-tree writes", async () => {
+		const dir = await fs.mkdtemp(path.join(os.tmpdir(), "sync-upstream-ledger-"));
+		try {
+			await $`git init -q -b main`.cwd(dir).quiet();
+			// No commit yet: missing HEAD path -> empty ledger.
+			expect(await loadCommittedRetainedLedger(dir)).toEqual({});
+
+			await saveRetainedLedger(dir, ledger);
+			// Written but uncommitted (the crash window between save and commit):
+			// the gate must still see an empty ledger and re-fire.
+			expect(await loadCommittedRetainedLedger(dir)).toEqual({});
+
+			await $`git add ${RETAINED_LEDGER_RELATIVE} && git -c user.name=Test -c user.email=test@example.invalid commit -q -m ledger`
+				.cwd(dir)
+				.quiet();
+			expect(await loadCommittedRetainedLedger(dir)).toEqual(ledger);
+		} finally {
+			await fs.rm(dir, { recursive: true, force: true });
+		}
+	});
+});
+
+describe("npm native acquisition fallback decision", () => {
+	it("falls back to bazel for npm 404 and publish-lag errors", () => {
+		expect(
+			classifyNpmNativeAcquisitionError(new Error("GET https://registry.npmjs.org/@oh-my-pi/pi-natives - 404")),
+		).toBe("fallback");
+		expect(classifyNpmNativeAcquisitionError("error: @oh-my-pi/pi-natives@17.4.3 failed to resolve")).toBe(
+			"fallback",
+		);
+		expect(classifyNpmNativeAcquisitionError(new Error("npm publish lags the upstream tag"))).toBe("fallback");
+		expect(classifyNpmNativeAcquisitionError(new Error("E404 Not Found"))).toBe("fallback");
+	});
+
+	it("classifies real bun-install ShellError shapes via stderr, not the fixed message", () => {
+		const shellError = (stderr: string) =>
+			Object.assign(new Error("Failed with exit code 1"), { stderr: Buffer.from(stderr) });
+		expect(
+			classifyNpmNativeAcquisitionError(
+				shellError(
+					'error: No version matching "17.4.3" found for specifier "@oh-my-pi/pi-natives"\nerror: @oh-my-pi/pi-natives@17.4.3 failed to resolve\n',
+				),
+			),
+		).toBe("fallback");
+		expect(
+			classifyNpmNativeAcquisitionError(
+				shellError("error: GET https://registry.npmjs.org/@oh-my-pi/pi-natives - 404\n"),
+			),
+		).toBe("fallback");
+		expect(classifyNpmNativeAcquisitionError(shellError("error: tarball checksum mismatch\n"))).toBe("rethrow");
+	});
+
+	it("rethrows unrelated acquisition failures", () => {
+		expect(classifyNpmNativeAcquisitionError(new Error("npm native package metadata mismatch"))).toBe("rethrow");
+		expect(classifyNpmNativeAcquisitionError(new Error("ECONNREFUSED"))).toBe("rethrow");
+		expect(classifyNpmNativeAcquisitionError(new Error("permission denied"))).toBe("rethrow");
 	});
 });
 
