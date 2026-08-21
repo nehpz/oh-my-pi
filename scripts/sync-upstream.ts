@@ -219,6 +219,20 @@ export function expectedAddonFilenames(tag: string): string[] {
 		: [`pi_natives.${tag}.node`];
 }
 
+export const RETAINED_LEDGER_RELATIVE = "scripts/sync-upstream-retained.json";
+
+export interface RetainedLedgerEntry {
+	subject: string;
+	reason: string;
+	date: string;
+}
+
+export type RetainedLedger = Record<string, RetainedLedgerEntry>;
+
+export type NoTestsPatchVerdict = "fork-record" | "ledger-retained" | "manual-review";
+
+export type NpmNativeAcquisitionAction = "fallback" | "rethrow";
+
 /** Check if a file is a documentation, gitignore, or fork record file. */
 export function isRecordFile(filePath: string): boolean {
 	const p = filePath.trim();
@@ -227,7 +241,8 @@ export function isRecordFile(filePath: string): boolean {
 		p.startsWith(".omp/") ||
 		p.startsWith(".compound-engineering/") ||
 		p.endsWith(".md") ||
-		p === ".gitignore"
+		p === ".gitignore" ||
+		p === RETAINED_LEDGER_RELATIVE
 	);
 }
 
@@ -236,11 +251,98 @@ export function isForkRecordPatch(changedFiles: string[]): boolean {
 	return changedFiles.length > 0 && changedFiles.every(isRecordFile);
 }
 
+/** Decide how a no-owned-tests patch should be treated given the retained ledger. */
+export function classifyNoTestsPatch(
+	changedFiles: string[],
+	patchId: string,
+	ledger: RetainedLedger,
+): NoTestsPatchVerdict {
+	if (isForkRecordPatch(changedFiles)) return "fork-record";
+	if (patchId && ledger[patchId]) return "ledger-retained";
+	return "manual-review";
+}
+
+/**
+ * npm leaf acquisition can 404 when publish lags the git tag; those errors
+ * fall back to a bazel-built native. Unrelated failures must not be swallowed.
+ */
+export function classifyNpmNativeAcquisitionError(err: unknown): NpmNativeAcquisitionAction {
+	// Bun ShellError carries a fixed message ("Failed with exit code 1"); the
+	// registry diagnostics live in .stderr/.stdout, so classify over all of them.
+	const parts = [err instanceof Error ? err.message : String(err)];
+	if (err && typeof err === "object") {
+		const shell = err as { stderr?: { toString(): string }; stdout?: { toString(): string } };
+		if (shell.stderr) parts.push(shell.stderr.toString());
+		if (shell.stdout) parts.push(shell.stdout.toString());
+	}
+	const msg = parts.join("\n");
+	if (
+		/\b404\b/.test(msg) ||
+		/\bE404\b/i.test(msg) ||
+		/not found/i.test(msg) ||
+		/failed to resolve/i.test(msg) ||
+		/no matching version/i.test(msg) ||
+		/version not found/i.test(msg) ||
+		/publish lags/i.test(msg)
+	) {
+		return "fallback";
+	}
+	return "rethrow";
+}
+
+function parseRetainedLedger(raw: string): RetainedLedger {
+	const parsed: unknown = JSON.parse(raw);
+	if (!parsed || typeof parsed !== "object" || Array.isArray(parsed)) return {};
+	return parsed as RetainedLedger;
+}
+
+export async function loadRetainedLedger(root: string): Promise<RetainedLedger> {
+	try {
+		return parseRetainedLedger(await Bun.file(path.resolve(root, RETAINED_LEDGER_RELATIVE)).text());
+	} catch (err) {
+		if (isEnoent(err)) return {};
+		throw err;
+	}
+}
+
+/**
+ * Ledger as committed on HEAD. Classification must use this, not the working
+ * tree: a run killed between saveRetainedLedger and its git commit would
+ * otherwise suppress the manual-review gate on resume and the uncommitted
+ * acceptance would never reach main.
+ */
+export async function loadCommittedRetainedLedger(worktreeDir: string): Promise<RetainedLedger> {
+	const out = await git(["show", `HEAD:${RETAINED_LEDGER_RELATIVE}`], worktreeDir)
+		.quiet()
+		.nothrow();
+	if (out.exitCode !== 0) return {};
+	return parseRetainedLedger(out.text());
+}
+
+export async function saveRetainedLedger(root: string, ledger: RetainedLedger): Promise<void> {
+	const ledgerPath = path.resolve(root, RETAINED_LEDGER_RELATIVE);
+	const tmpPath = `${ledgerPath}.tmp.${crypto.randomUUID()}`;
+	try {
+		await Bun.write(tmpPath, `${JSON.stringify(ledger, null, 2)}\n`);
+		await fs.rename(tmpPath, ledgerPath);
+	} finally {
+		await fs.rm(tmpPath, { force: true }).catch(() => {});
+	}
+}
+
+export async function stablePatchId(sha: string, cwd: string): Promise<string> {
+	const out = await $`git -c core.fsmonitor=false diff-tree -p ${sha} | git patch-id --stable`.cwd(cwd).quiet();
+	const id = out.text().trim().split(/\s+/)[0];
+	if (!id) throw new Error(`could not compute stable patch-id for ${sha}`);
+	return id;
+}
+
 export interface SupersessionVerdict {
 	sha: string;
 	subject: string;
 	result: "retained" | "superseded" | "manual-review";
 	note: string;
+	patchId?: string;
 }
 
 export interface PreparationEvidence {
@@ -948,13 +1050,14 @@ export async function supersessionCheck(
 	version: string,
 	progress?: SyncProgress,
 	worktreeDir: string = worktreePath,
-): Promise<{ notes: string[]; supersededShas: string[] }> {
+): Promise<{ notes: string[]; supersededShas: string[]; manualReview: SupersessionVerdict[] }> {
 	if (!progress) {
 		const syncHead = (await git(["rev-parse", `refs/heads/sync/${version}`], worktreeDir).quiet()).text().trim();
 		progress = await loadProgress(worktreeDir, version, syncHead);
 	}
 	const stack = await stackSince(upstreamTag(version), worktreeDir, `sync/${version}`);
 	const patchesToProbe: Array<{ patch: Patch; tests: string[] }> = [];
+	const ledger = await loadCommittedRetainedLedger(worktreeDir);
 
 	for (const patch of stack) {
 		const changedFiles = await changedFilesOf(patch.sha, worktreeDir);
@@ -976,19 +1079,46 @@ export async function supersessionCheck(
 					console.log(`supersession: ${patch.sha} (cached: fork record retained)`);
 				}
 			} else {
-				const note = `${patch.sha} ${patch.subject} (no owned tests — manual review)`;
-				const verdict: SupersessionVerdict = {
-					sha: patch.sha,
-					subject: patch.subject,
-					result: "manual-review",
-					note,
-				};
-				if (!progress.supersessionVerdicts[patch.sha]) {
-					console.log(`supersession: ${patch.sha} has no owned tests — flagging for manual review`);
-					progress.supersessionVerdicts[patch.sha] = verdict;
-					await saveProgress(worktreeDir, progress);
+				const patchId =
+					progress.supersessionVerdicts[patch.sha]?.patchId ?? (await stablePatchId(patch.sha, worktreeDir));
+				const kind = classifyNoTestsPatch(changedFiles, patchId, ledger);
+				if (kind === "ledger-retained") {
+					const reason = ledger[patchId]?.reason ?? "retained";
+					const verdict: SupersessionVerdict = {
+						sha: patch.sha,
+						subject: patch.subject,
+						result: "retained",
+						note: `${patch.sha} ${patch.subject} (ledger retained: ${reason})`,
+						patchId,
+					};
+					const cached = progress.supersessionVerdicts[patch.sha];
+					if (cached?.result !== "retained" || cached.patchId !== patchId) {
+						console.log(`supersession: ${patch.sha} is ledger-retained — skipping manual review`);
+						progress.supersessionVerdicts[patch.sha] = verdict;
+						await saveProgress(worktreeDir, progress);
+					} else {
+						console.log(`supersession: ${patch.sha} (cached: ledger retained)`);
+					}
 				} else {
-					console.log(`supersession: ${patch.sha} (cached: manual review)`);
+					const note = `${patch.sha} ${patch.subject} (no owned tests — manual review; patch-id ${patchId})`;
+					const verdict: SupersessionVerdict = {
+						sha: patch.sha,
+						subject: patch.subject,
+						result: "manual-review",
+						note,
+						patchId,
+					};
+					if (!progress.supersessionVerdicts[patch.sha]) {
+						console.log(`supersession: ${patch.sha} has no owned tests — flagging for manual review`);
+						progress.supersessionVerdicts[patch.sha] = verdict;
+						await saveProgress(worktreeDir, progress);
+					} else {
+						progress.supersessionVerdicts[patch.sha] = {
+							...progress.supersessionVerdicts[patch.sha],
+							...verdict,
+						};
+						console.log(`supersession: ${patch.sha} (cached: manual review)`);
+					}
 				}
 			}
 		} else {
@@ -1021,6 +1151,7 @@ export async function supersessionCheck(
 				if (!acquiredSourceRoot)
 					throw new Error("npm supersession probe acquisition did not produce a source root");
 			} catch (err) {
+				if (classifyNpmNativeAcquisitionError(err) === "rethrow") throw err;
 				// npm publish can lag the upstream git tag; fall back to building the
 				// tag's own natives from source, mirroring bazel-mode preparation.
 				console.log(
@@ -1075,6 +1206,7 @@ export async function supersessionCheck(
 
 	const notes: string[] = [];
 	const supersededShas: string[] = [];
+	const manualReview: SupersessionVerdict[] = [];
 	for (const p of stack) {
 		const verdict = progress.supersessionVerdicts[p.sha];
 		if (verdict?.result === "superseded") {
@@ -1082,9 +1214,10 @@ export async function supersessionCheck(
 			supersededShas.push(verdict.sha);
 		} else if (verdict?.result === "manual-review") {
 			notes.push(verdict.note);
+			manualReview.push(verdict);
 		}
 	}
-	return { notes, supersededShas };
+	return { notes, supersededShas, manualReview };
 }
 
 async function dropSupersededCommits(version: string, shas: readonly string[]): Promise<void> {
@@ -1103,6 +1236,27 @@ async function dropSupersededCommits(version: string, shas: readonly string[]): 
 		.quiet()
 		.nothrow();
 	if (result.exitCode !== 0) throw new Error(`failed to drop superseded commits:\n${result.text()}`);
+}
+
+async function recordManualReviewAcceptances(
+	worktreeDir: string,
+	flagged: readonly SupersessionVerdict[],
+): Promise<void> {
+	const ledger = await loadRetainedLedger(worktreeDir);
+	const date = new Date().toISOString().slice(0, 10);
+	for (const verdict of flagged) {
+		const patchId = verdict.patchId ?? (await stablePatchId(verdict.sha, worktreeDir));
+		ledger[patchId] = {
+			subject: verdict.subject,
+			reason: "accepted via --accept-manual-review",
+			date,
+		};
+	}
+	await saveRetainedLedger(worktreeDir, ledger);
+	await git(["add", RETAINED_LEDGER_RELATIVE], worktreeDir).quiet();
+	const staged = await git(["status", "--porcelain", "--", RETAINED_LEDGER_RELATIVE], worktreeDir).quiet();
+	if (!staged.text().trim()) return;
+	await git(["commit", "-m", "chore(fork): record manual-review acceptances"], worktreeDir).quiet();
 }
 
 interface VerificationCommandResult {
@@ -1377,13 +1531,26 @@ async function cmdSync(
 	let syncHead = (await git(["rev-parse", `refs/heads/sync/${version}`]).quiet()).text().trim();
 	let progress = await loadProgress(worktreePath, version, syncHead);
 	const supersession = await supersessionCheck(version, progress, worktreePath);
+	if (!verifyOnly && supersession.manualReview.length > 0) {
+		if (!acceptManualReview) {
+			throw new Error(
+				"manual review is required before promotion; re-run with --accept-manual-review (acceptance will be recorded in scripts/sync-upstream-retained.json)",
+			);
+		}
+		// Runs BEFORE dropSupersededCommits: a crash-leftover dirty ledger would make
+		// the drop rebase refuse; committing here first keeps resume self-healing.
+		// Uses the verdicts captured by supersessionCheck — their patch-id keys stay
+		// valid across the drop rebase, and the acceptance commit only appends, so
+		// the cached verdict shas remain intact.
+		await recordManualReviewAcceptances(worktreePath, supersession.manualReview);
+		syncHead = (await git(["rev-parse", `refs/heads/sync/${version}`]).quiet()).text().trim();
+		progress.head = syncHead;
+		await saveProgress(worktreePath, progress);
+	}
 	if (supersession.supersededShas.length > 0) {
 		await dropSupersededCommits(version, supersession.supersededShas);
 		syncHead = (await git(["rev-parse", `refs/heads/sync/${version}`]).quiet()).text().trim();
 		progress = await loadProgress(worktreePath, version, syncHead);
-	}
-	if (!verifyOnly && supersession.notes.some(note => note.includes("manual review")) && !acceptManualReview) {
-		throw new Error("manual review is required before promotion; re-run with --accept-manual-review");
 	}
 	const replanted = await stackSince(upstreamTag(version), worktreePath, `sync/${version}`);
 	const { retained } = await partitionReplantStack(replanted);
