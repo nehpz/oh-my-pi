@@ -1,0 +1,7 @@
+{
+  "00a0e90f95ada4778ef7492f02c922acb28b281d": {
+    "subject": "fix(sync): fall back to bazel-built natives when npm publish lags the upstream tag",
+    "reason": "script-only sync tooling fix; fallback decision logic now covered by tests",
+    "date": "2026-08-21"
+  }
+}
