@@ -226,20 +226,14 @@ export function isRecordFile(filePath: string): boolean {
 		p.startsWith("docs/") ||
 		p.startsWith(".omp/") ||
 		p.startsWith(".compound-engineering/") ||
-		p === "AGENTS.md" ||
-		p === "CONCEPTS.md" ||
+		p.endsWith(".md") ||
 		p === ".gitignore"
 	);
 }
 
-/** Check if a commit subject represents a fork record (accepts chore(fork), chore(dev), docs(fork), docs(natives)). */
-export function isForkRecordSubject(subject: string): boolean {
-	return /^(chore\(fork\)|chore\(dev\)|docs\(fork\)|docs\(natives\)):/i.test(subject.trim());
-}
-
-/** Check if a patch is a pure fork record (record subject and all changed files are record-only). */
-export function isForkRecordPatch(patch: Patch, changedFiles: string[]): boolean {
-	return isForkRecordSubject(patch.subject) && changedFiles.length > 0 && changedFiles.every(isRecordFile);
+/** Check if a patch is a pure fork record: every changed file is record-only (docs/markdown/config records). Subject prefix is irrelevant — record-only diffs cannot be superseded by upstream code, so they never need manual review. */
+export function isForkRecordPatch(changedFiles: string[]): boolean {
+	return changedFiles.length > 0 && changedFiles.every(isRecordFile);
 }
 
 export interface SupersessionVerdict {
@@ -967,7 +961,7 @@ export async function supersessionCheck(
 		const tests = testFilesOf(changedFiles);
 
 		if (tests.length === 0) {
-			if (isForkRecordPatch(patch, changedFiles)) {
+			if (isForkRecordPatch(changedFiles)) {
 				const verdict: SupersessionVerdict = {
 					sha: patch.sha,
 					subject: patch.subject,

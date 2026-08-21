@@ -15,7 +15,6 @@ import {
 	installAndCleanStagedNativeAddon,
 	installVerifiedNativeAddon,
 	isForkRecordPatch,
-	isForkRecordSubject,
 	isGeneratedLockRefreshPatch,
 	isRecordFile,
 	isTrackedClean,
@@ -512,28 +511,16 @@ describe("status subcommand", () => {
 	});
 });
 describe("fork record classification", () => {
-	it("identifies recognized fork record subjects", () => {
-		expect(isForkRecordSubject("chore(fork): formalize knowledge")).toBe(true);
-		expect(isForkRecordSubject("chore(dev): add config example")).toBe(true);
-		expect(isForkRecordSubject("docs(fork): record supersession review")).toBe(true);
-		expect(isForkRecordSubject("docs(natives): document diagnostics")).toBe(true);
-
-		expect(isForkRecordSubject("docs: update readme")).toBe(false);
-		expect(isForkRecordSubject("chore: update dependencies")).toBe(false);
-		expect(isForkRecordSubject("fix(fork): rebuild native")).toBe(false);
-		expect(isForkRecordSubject("feat(ai): new model")).toBe(false);
-	});
-
 	it("identifies record-only files", () => {
 		expect(isRecordFile("docs/fork-maintenance.md")).toBe(true);
 		expect(isRecordFile("AGENTS.md")).toBe(true);
 		expect(isRecordFile("CONCEPTS.md")).toBe(true);
+		expect(isRecordFile("README.md")).toBe(true);
+		expect(isRecordFile("CHANGELOG.md")).toBe(true);
 		expect(isRecordFile(".omp/logs/omp.log")).toBe(true);
 		expect(isRecordFile(".compound-engineering/spec.md")).toBe(true);
 		expect(isRecordFile(".gitignore")).toBe(true);
 
-		expect(isRecordFile("README.md")).toBe(false);
-		expect(isRecordFile("CHANGELOG.md")).toBe(false);
 		expect(isRecordFile("LICENSE")).toBe(false);
 		expect(isRecordFile("scripts/sync-upstream.ts")).toBe(false);
 		expect(isRecordFile("packages/coding-agent/src/cli.ts")).toBe(false);
@@ -541,25 +528,14 @@ describe("fork record classification", () => {
 		expect(isRecordFile("package.json")).toBe(false);
 	});
 
-	it("classifies patches as fork records only when subject and all files match", () => {
-		const recordPatch: Patch = {
-			sha: "2c506",
-			subject: "chore(fork): formalize upstream sync process knowledge and concepts",
-		};
-		expect(isForkRecordPatch(recordPatch, ["docs/fork-maintenance.md", "CONCEPTS.md"])).toBe(true);
+	it("classifies patches as fork records by files alone, regardless of subject", () => {
+		expect(isForkRecordPatch(["docs/solutions/x.md", "CONCEPTS.md"])).toBe(true);
 
-		const devPatch: Patch = {
-			sha: "350429",
-			subject: "chore(dev): preserve fork-local development configuration",
-		};
 		const recordFiles = [".gitignore", ".omp/mcp.json", ".compound-engineering/config.local.example.yaml"];
-		expect(isForkRecordPatch(devPatch, recordFiles)).toBe(true);
+		expect(isForkRecordPatch(recordFiles)).toBe(true);
 
-		const buildPatch: Patch = {
-			sha: "460530",
-			subject: "build(natives): preserve fork-local development configuration",
-		};
-		expect(isForkRecordPatch(buildPatch, recordFiles)).toBe(false);
+		expect(isForkRecordPatch(["docs/note.md", "scripts/sync-upstream.ts"])).toBe(false);
+		expect(isForkRecordPatch([])).toBe(false);
 	});
 });
 
