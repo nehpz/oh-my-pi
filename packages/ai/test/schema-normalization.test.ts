@@ -985,6 +985,21 @@ describe("normalizeSchemaForCCA", () => {
 			required: ["name"],
 		});
 	});
+	it("strips uniqueItems, which the Cloud Code Assist Schema proto rejects", () => {
+		// MCP servers (e.g. netdata's get_metric_data) declare `uniqueItems` on
+		// array parameters; protojson has no such Schema field and 400s the whole
+		// request with "Cannot find field". It is liftable, so it lands in the
+		// description instead of the wire schema.
+		const normalized = normalizeSchemaForCCA({
+			type: "array",
+			items: { type: "string" },
+			uniqueItems: true,
+			description: "Dimensions",
+		}) as Record<string, unknown>;
+
+		expect(normalized.uniqueItems).toBeUndefined();
+		expect(normalized.description).toBe("Dimensions\n\n{uniqueItems: true}");
+	});
 
 	it("lifts stripped validation keywords into description", () => {
 		const normalized = normalizeSchemaForCCA({
