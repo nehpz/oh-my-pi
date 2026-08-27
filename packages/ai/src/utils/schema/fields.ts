@@ -28,6 +28,7 @@ export const UNSUPPORTED_SCHEMA_FIELDS: Record<string, true> = {
 	propertyNames: true,
 	minItems: true,
 	maxItems: true,
+	uniqueItems: true,
 	minLength: true,
 	maxLength: true,
 	minimum: true,
