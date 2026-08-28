@@ -98,6 +98,854 @@ For any future local change:
 
 <!-- Appended by scripts/sync-upstream.ts; newest first. -->
 
+### 2026-08-28 — v18.0.8 → v18.0.10
+
+- kept 9654275572 feat(ai): enforce Cursor execution policy rejections
+- kept 2c11bd65fa fix(ai,coding-agent): normalize gateway model catalog metadata
+- kept 39f42c854d chore(dev): preserve fork-local development configuration
+- kept e28d4da72f fix(natives): diagnose and safely promote workspace addons
+- kept f8780e0d2f chore(fork): automate parentless syncs with verified npm natives
+- kept c0b22f8157 chore(fork): sync log for v17.2.5
+- kept 76869d2846 docs(fork): retire macOS 27 Bazel overlay in favor of npm-native syncs
+- kept aead6b50fc chore(fork): sync log for v17.2.7
+- kept 2d4866834f chore(fork): sync log for v17.2.8
+- kept 259d307950 chore(fork): promote automatically once sync verification passes
+- kept f8b8f8453d chore(fork): sync log for v17.2.9
+- kept 93cf18ca61 chore(dev): pin the shared mnemopi bank for worktree sessions
+- kept 4c9c57d5f1 chore(fork): sync log for v17.2.10
+- kept 615e09ef25 fix(sync): clear stale unregistered worktree directories
+- kept f42732d1ff chore(fork): sync log for v17.2.11
+- kept 3d2fbd47e5 chore(fork): sync log for v17.2.12
+- kept 9ae28c92b1 chore(fork): sync log for v17.2.13
+- kept 8a6e6c419a chore(fork): sync log for v17.2.14
+- kept 710a054984 fix(coding-agent): decide non-symlink containment by the parent directory
+- kept 54329c2fdf chore(fork): sync log for v17.2.15
+- kept f73915e068 docs(solutions): capture macOS hard-link realpath containment learning
+- kept cebd4e3a3f docs(solutions): record rejection of context-mode plugin for omp
+- kept 1ad37e82b5 chore(fork): sync log for v17.3.0
+- kept 1195eb87a7 chore(fork): sync log for v17.3.1
+- kept 2b58baa042 chore(fork): sync log for v17.3.2
+- kept aab6bdddfc chore(fork): sync log for v17.3.3
+- kept 7ebd61d7c9 chore(fork): sync log for v17.3.4
+- kept 1625436376 chore(fork): sync log for v17.3.5
+- kept 6572963e7d chore(fork): sync log for v17.3.7
+- kept 95ef5ff750 chore(fork): sync log for v17.3.8
+- kept 50c43d52ff fix(ai): always emit context_length/max_tokens (null fallback) on gateway /v1/models
+- kept 5be9b4b44e fix(sync): fall back to bazel-built natives when npm publish lags the upstream tag
+- kept 723651ed00 chore(fork): sync log for v17.4.0
+- kept 4f9c263e95 chore(fork): sync log for v17.4.1
+- kept 4bd92e3cad refactor(sync): classify fork records by file paths only, drop subject check
+- kept eade065d04 chore(fork): sync log for v17.4.2
+- kept e4f10f44fd feat(sync): record manual-review acceptances in a durable patch-id ledger
+- kept ccc9b217aa chore(fork): sync log for v18.0.0
+- kept 7e6607958c chore(fork): sync log for v18.0.3
+- kept 11134949c7 chore(fork): sync log for v18.0.4
+- kept 16e4c06e4c chore(fork): sync log for v18.0.5
+- kept 6e38171aa3 chore(fork): sync log for v18.0.6
+- kept 831ff58734 fix(ai): strip uniqueItems from Google/Antigravity tool schemas
+- kept 2f1dd99c6f chore(fork): sync log for v18.0.7
+- kept e34762e39d chore(fork): sync log for v18.0.8
+
+### 2026-08-27 — v18.0.7 → v18.0.8
+
+- kept e4be82d1ab feat(ai): enforce Cursor execution policy rejections
+- kept d96ff86aca fix(ai,coding-agent): normalize gateway model catalog metadata
+- kept 2acaae8439 chore(dev): preserve fork-local development configuration
+- kept 0ff12bdd6a fix(natives): diagnose and safely promote workspace addons
+- kept 112df4f769 chore(fork): automate parentless syncs with verified npm natives
+- kept 416e845842 chore(fork): sync log for v17.2.5
+- kept 26e266f478 docs(fork): retire macOS 27 Bazel overlay in favor of npm-native syncs
+- kept 41a8389ce3 chore(fork): sync log for v17.2.7
+- kept c91608954b chore(fork): sync log for v17.2.8
+- kept e339312349 chore(fork): promote automatically once sync verification passes
+- kept 47a97cd171 chore(fork): sync log for v17.2.9
+- kept 96ddf68c09 chore(dev): pin the shared mnemopi bank for worktree sessions
+- kept 9a1866bffe chore(fork): sync log for v17.2.10
+- kept 557b31395a fix(sync): clear stale unregistered worktree directories
+- kept 6fa6fd61b7 chore(fork): sync log for v17.2.11
+- kept e31fbae03e chore(fork): sync log for v17.2.12
+- kept 0e19ad9664 chore(fork): sync log for v17.2.13
+- kept 9004a0ae59 chore(fork): sync log for v17.2.14
+- kept f7c54f2d4a fix(coding-agent): decide non-symlink containment by the parent directory
+- kept adef2ef706 chore(fork): sync log for v17.2.15
+- kept b28dccd41a docs(solutions): capture macOS hard-link realpath containment learning
+- kept 160dbdf6cf docs(solutions): record rejection of context-mode plugin for omp
+- kept fd8005ba28 chore(fork): sync log for v17.3.0
+- kept 84cc6c1fde chore(fork): sync log for v17.3.1
+- kept 11de147c59 chore(fork): sync log for v17.3.2
+- kept 40c95ba9ea chore(fork): sync log for v17.3.3
+- kept 95bb56c7c4 chore(fork): sync log for v17.3.4
+- kept ffe57723a1 chore(fork): sync log for v17.3.5
+- kept 88e1db1fe5 chore(fork): sync log for v17.3.7
+- kept addc81c8d9 chore(fork): sync log for v17.3.8
+- kept b66c65713a fix(ai): always emit context_length/max_tokens (null fallback) on gateway /v1/models
+- kept d92e6217d8 fix(sync): fall back to bazel-built natives when npm publish lags the upstream tag
+- kept 20f4baef70 chore(fork): sync log for v17.4.0
+- kept 442ce96059 chore(fork): sync log for v17.4.1
+- kept 6084be60fe refactor(sync): classify fork records by file paths only, drop subject check
+- kept 97a17d97a0 chore(fork): sync log for v17.4.2
+- kept 6503430872 feat(sync): record manual-review acceptances in a durable patch-id ledger
+- kept d6692e0574 chore(fork): sync log for v18.0.0
+- kept a609f17805 chore(fork): sync log for v18.0.3
+- kept 6973bc6a7c chore(fork): sync log for v18.0.4
+- kept 9d3ed5e996 chore(fork): sync log for v18.0.5
+- kept a76f7cb371 chore(fork): sync log for v18.0.6
+- kept 7f9558fe55 fix(ai): strip uniqueItems from Google/Antigravity tool schemas
+- kept 2dea07fb6c chore(fork): sync log for v18.0.7
+
+### 2026-08-27 — v18.0.6 → v18.0.7
+
+- kept 0659ebad41 feat(ai): enforce Cursor execution policy rejections
+- kept c2dffabe22 fix(ai,coding-agent): normalize gateway model catalog metadata
+- kept 71f4e988dc chore(dev): preserve fork-local development configuration
+- kept 6979188671 fix(natives): diagnose and safely promote workspace addons
+- kept 7e7dc5e4c5 chore(fork): automate parentless syncs with verified npm natives
+- kept 164633c69f chore(fork): sync log for v17.2.5
+- kept 11f326294b docs(fork): retire macOS 27 Bazel overlay in favor of npm-native syncs
+- kept 0067b202c6 chore(fork): sync log for v17.2.7
+- kept 00d4d40a1c chore(fork): sync log for v17.2.8
+- kept b44e69c1f1 chore(fork): promote automatically once sync verification passes
+- kept 4cdef8834e chore(fork): sync log for v17.2.9
+- kept 14db6992c1 chore(dev): pin the shared mnemopi bank for worktree sessions
+- kept 625ba034eb chore(fork): sync log for v17.2.10
+- kept 2238c50781 fix(sync): clear stale unregistered worktree directories
+- kept 7ae83dba60 chore(fork): sync log for v17.2.11
+- kept c1f8e3fc2d chore(fork): sync log for v17.2.12
+- kept 822b1d9b19 chore(fork): sync log for v17.2.13
+- kept 0d9d676e9a chore(fork): sync log for v17.2.14
+- kept 6aff194ea4 fix(coding-agent): decide non-symlink containment by the parent directory
+- kept 4b5c518c54 chore(fork): sync log for v17.2.15
+- kept 1ec05cf527 docs(solutions): capture macOS hard-link realpath containment learning
+- kept 1ba0d81422 docs(solutions): record rejection of context-mode plugin for omp
+- kept 173107990a chore(fork): sync log for v17.3.0
+- kept baf8e3afd0 chore(fork): sync log for v17.3.1
+- kept 518098df5a chore(fork): sync log for v17.3.2
+- kept 383affea14 chore(fork): sync log for v17.3.3
+- kept f12b9c7471 chore(fork): sync log for v17.3.4
+- kept 7774c8ce32 chore(fork): sync log for v17.3.5
+- kept 83fc306162 chore(fork): sync log for v17.3.7
+- kept fd649369c1 chore(fork): sync log for v17.3.8
+- kept bfb9526da0 fix(ai): always emit context_length/max_tokens (null fallback) on gateway /v1/models
+- kept fdcb0f4e07 fix(sync): fall back to bazel-built natives when npm publish lags the upstream tag
+- kept 5160cca991 chore(fork): sync log for v17.4.0
+- kept 0f529060c2 chore(fork): sync log for v17.4.1
+- kept ad1aed3174 refactor(sync): classify fork records by file paths only, drop subject check
+- kept 1c863b4522 chore(fork): sync log for v17.4.2
+- kept bc0e151aa1 feat(sync): record manual-review acceptances in a durable patch-id ledger
+- kept 808edddf5d chore(fork): sync log for v18.0.0
+- kept 5cd8bbb5ba chore(fork): sync log for v18.0.3
+- kept 144e46e78d chore(fork): sync log for v18.0.4
+- kept 68a078b687 chore(fork): sync log for v18.0.5
+- kept d781df0ba6 chore(fork): sync log for v18.0.6
+- kept 1883c786bc fix(ai): strip uniqueItems from Google/Antigravity tool schemas
+
+### 2026-08-26 — v18.0.5 → v18.0.6
+
+- kept f8f72319c1 feat(ai): enforce Cursor execution policy rejections
+- kept 8536d5eeef fix(ai,coding-agent): normalize gateway model catalog metadata
+- kept 7ceb3c6147 chore(dev): preserve fork-local development configuration
+- kept 959527e05b fix(natives): diagnose and safely promote workspace addons
+- kept ebd8053a61 chore(fork): automate parentless syncs with verified npm natives
+- kept 41e8732c5e chore(fork): sync log for v17.2.5
+- kept 78e3717a7f docs(fork): retire macOS 27 Bazel overlay in favor of npm-native syncs
+- kept 0a54936c92 chore(fork): sync log for v17.2.7
+- kept 273d03240e chore(fork): sync log for v17.2.8
+- kept b63956ea4f chore(fork): promote automatically once sync verification passes
+- kept 10130cd6d7 chore(fork): sync log for v17.2.9
+- kept d8b32fc848 chore(dev): pin the shared mnemopi bank for worktree sessions
+- kept 99ade96ec9 chore(fork): sync log for v17.2.10
+- kept b50dec327e fix(sync): clear stale unregistered worktree directories
+- kept 5106bfc09c chore(fork): sync log for v17.2.11
+- kept 9a1466bb3b chore(fork): sync log for v17.2.12
+- kept 8bb9d36c64 chore(fork): sync log for v17.2.13
+- kept cddccf308e chore(fork): sync log for v17.2.14
+- kept dd97ab9bfa fix(coding-agent): decide non-symlink containment by the parent directory
+- kept 24d02b9b04 chore(fork): sync log for v17.2.15
+- kept 9d8621d95d docs(solutions): capture macOS hard-link realpath containment learning
+- kept 71539c9e75 docs(solutions): record rejection of context-mode plugin for omp
+- kept dc5976ede6 chore(fork): sync log for v17.3.0
+- kept a7de8cd331 chore(fork): sync log for v17.3.1
+- kept 437b9bba6e chore(fork): sync log for v17.3.2
+- kept f9789a5bd2 chore(fork): sync log for v17.3.3
+- kept 2777f28667 chore(fork): sync log for v17.3.4
+- kept 9f637a919a chore(fork): sync log for v17.3.5
+- kept 8bec11bf5a chore(fork): sync log for v17.3.7
+- kept 94a3179541 chore(fork): sync log for v17.3.8
+- kept fb08217ebe fix(ai): always emit context_length/max_tokens (null fallback) on gateway /v1/models
+- kept fdf703ef44 fix(sync): fall back to bazel-built natives when npm publish lags the upstream tag
+- kept d4cd16850d chore(fork): sync log for v17.4.0
+- kept 6604ce692b chore(fork): sync log for v17.4.1
+- kept 9421260270 refactor(sync): classify fork records by file paths only, drop subject check
+- kept 728ed0cde8 chore(fork): sync log for v17.4.2
+- kept ad8a31e81f feat(sync): record manual-review acceptances in a durable patch-id ledger
+- kept 554ac51362 chore(fork): sync log for v18.0.0
+- kept a21e17eaae chore(fork): sync log for v18.0.3
+- kept c44cfcdec4 chore(fork): sync log for v18.0.4
+- kept c5203f762a chore(fork): sync log for v18.0.5
+
+### 2026-08-25 — v18.0.4 → v18.0.5
+
+- kept 6f365b31ca feat(ai): enforce Cursor execution policy rejections
+- kept 2d08d58d3c fix(ai,coding-agent): normalize gateway model catalog metadata
+- kept b3725aac41 chore(dev): preserve fork-local development configuration
+- kept dee7bce78c fix(natives): diagnose and safely promote workspace addons
+- kept 187357ac64 chore(fork): automate parentless syncs with verified npm natives
+- kept cc1e0bbe63 chore(fork): sync log for v17.2.5
+- kept f02bb467b1 docs(fork): retire macOS 27 Bazel overlay in favor of npm-native syncs
+- kept 8491197608 chore(fork): sync log for v17.2.7
+- kept 32ced49df2 chore(fork): sync log for v17.2.8
+- kept 684974bcf9 chore(fork): promote automatically once sync verification passes
+- kept d8a7461900 chore(fork): sync log for v17.2.9
+- kept 5310c97fbb chore(dev): pin the shared mnemopi bank for worktree sessions
+- kept 1f68c6470c chore(fork): sync log for v17.2.10
+- kept be7cfedfcd fix(sync): clear stale unregistered worktree directories
+- kept c86880b919 chore(fork): sync log for v17.2.11
+- kept 8f58ec2930 chore(fork): sync log for v17.2.12
+- kept 91820490d2 chore(fork): sync log for v17.2.13
+- kept 3cac8a96cb chore(fork): sync log for v17.2.14
+- kept ca9c6206c3 fix(coding-agent): decide non-symlink containment by the parent directory
+- kept 02f4bd215b chore(fork): sync log for v17.2.15
+- kept 3146657e03 docs(solutions): capture macOS hard-link realpath containment learning
+- kept bfd37069fd docs(solutions): record rejection of context-mode plugin for omp
+- kept dada5c4d57 chore(fork): sync log for v17.3.0
+- kept 8a71e37de8 chore(fork): sync log for v17.3.1
+- kept c51abef595 chore(fork): sync log for v17.3.2
+- kept 85f0e45a60 chore(fork): sync log for v17.3.3
+- kept 2133ee3246 chore(fork): sync log for v17.3.4
+- kept 4568b3ec9f chore(fork): sync log for v17.3.5
+- kept c7e8f4b64f chore(fork): sync log for v17.3.7
+- kept 5572518cec chore(fork): sync log for v17.3.8
+- kept 058cf60c91 fix(ai): always emit context_length/max_tokens (null fallback) on gateway /v1/models
+- kept 2d4f68fa66 fix(sync): fall back to bazel-built natives when npm publish lags the upstream tag
+- kept b6bae4ee41 chore(fork): sync log for v17.4.0
+- kept 3d988d76ee chore(fork): sync log for v17.4.1
+- kept d2631490c9 refactor(sync): classify fork records by file paths only, drop subject check
+- kept 4b885c5004 chore(fork): sync log for v17.4.2
+- kept 9e1263cf38 feat(sync): record manual-review acceptances in a durable patch-id ledger
+- kept 9573db0aef chore(fork): sync log for v18.0.0
+- kept 0f8ba73877 chore(fork): sync log for v18.0.3
+- kept 55ccc5fa88 chore(fork): sync log for v18.0.4
+
+### 2026-08-24 — v18.0.3 → v18.0.4
+
+- kept 846d8c127d feat(ai): enforce Cursor execution policy rejections
+- kept 72f13234ab fix(ai,coding-agent): normalize gateway model catalog metadata
+- kept 0c4160de20 chore(dev): preserve fork-local development configuration
+- kept 669c6583c3 fix(natives): diagnose and safely promote workspace addons
+- kept 4e1aaa07f8 chore(fork): automate parentless syncs with verified npm natives
+- kept 221f96eb50 chore(fork): sync log for v17.2.5
+- kept ae5edab208 docs(fork): retire macOS 27 Bazel overlay in favor of npm-native syncs
+- kept 31458b0e93 chore(fork): sync log for v17.2.7
+- kept 755602b6e5 chore(fork): sync log for v17.2.8
+- kept 3b675a4904 chore(fork): promote automatically once sync verification passes
+- kept 91314560c0 chore(fork): sync log for v17.2.9
+- kept 8666528a8e chore(dev): pin the shared mnemopi bank for worktree sessions
+- kept 88017cb16f chore(fork): sync log for v17.2.10
+- kept b001b0c2b5 fix(sync): clear stale unregistered worktree directories
+- kept fbbc8272b0 chore(fork): sync log for v17.2.11
+- kept 0f27bc51b4 chore(fork): sync log for v17.2.12
+- kept b9915026ff chore(fork): sync log for v17.2.13
+- kept bdd25a4189 chore(fork): sync log for v17.2.14
+- kept 6ace01d319 fix(coding-agent): decide non-symlink containment by the parent directory
+- kept 4131159e70 chore(fork): sync log for v17.2.15
+- kept 60f75e976a docs(solutions): capture macOS hard-link realpath containment learning
+- kept c24899da00 docs(solutions): record rejection of context-mode plugin for omp
+- kept cb5b32ec66 chore(fork): sync log for v17.3.0
+- kept 1fa1af0cfa chore(fork): sync log for v17.3.1
+- kept 4387d924c3 chore(fork): sync log for v17.3.2
+- kept cef1fc75f4 chore(fork): sync log for v17.3.3
+- kept d42a3a4203 chore(fork): sync log for v17.3.4
+- kept dd13b34985 chore(fork): sync log for v17.3.5
+- kept 837a2f6d3a chore(fork): sync log for v17.3.7
+- kept f3dd3bbd14 chore(fork): sync log for v17.3.8
+- kept bb37799190 fix(ai): always emit context_length/max_tokens (null fallback) on gateway /v1/models
+- kept 156cd89274 fix(sync): fall back to bazel-built natives when npm publish lags the upstream tag
+- kept 76f2834a32 chore(fork): sync log for v17.4.0
+- kept eaa4a20c22 chore(fork): sync log for v17.4.1
+- kept 54650d53cf refactor(sync): classify fork records by file paths only, drop subject check
+- kept 6b9442a4af chore(fork): sync log for v17.4.2
+- kept 27a037e721 feat(sync): record manual-review acceptances in a durable patch-id ledger
+- kept a898ff6b0c chore(fork): sync log for v18.0.0
+- kept 86b1c0b815 chore(fork): sync log for v18.0.3
+
+### 2026-08-23 — v18.0.0 → v18.0.3
+
+- kept df5f6001fc feat(ai): enforce Cursor execution policy rejections
+- kept 07fb62a850 fix(ai,coding-agent): normalize gateway model catalog metadata
+- kept 87282ac07b chore(dev): preserve fork-local development configuration
+- kept 876f55f790 fix(natives): diagnose and safely promote workspace addons
+- kept 6c515a7e9a chore(fork): automate parentless syncs with verified npm natives
+- kept c368884f17 chore(fork): sync log for v17.2.5
+- kept 159375a545 docs(fork): retire macOS 27 Bazel overlay in favor of npm-native syncs
+- kept 0cebeaf858 chore(fork): sync log for v17.2.7
+- kept 6fd31f08ea chore(fork): sync log for v17.2.8
+- kept 2ff6d526a7 chore(fork): promote automatically once sync verification passes
+- kept b6d5cf7cfc chore(fork): sync log for v17.2.9
+- kept 79e4d8e854 chore(dev): pin the shared mnemopi bank for worktree sessions
+- kept e253ad37cd chore(fork): sync log for v17.2.10
+- kept c4ebc8d232 fix(sync): clear stale unregistered worktree directories
+- kept ebc67a6f35 chore(fork): sync log for v17.2.11
+- kept 60b1aa5883 chore(fork): sync log for v17.2.12
+- kept bfefe642e6 chore(fork): sync log for v17.2.13
+- kept c87b7751e7 chore(fork): sync log for v17.2.14
+- kept 2a52f56a38 fix(coding-agent): decide non-symlink containment by the parent directory
+- kept 63bcacf8e9 chore(fork): sync log for v17.2.15
+- kept b3a8c4661f docs(solutions): capture macOS hard-link realpath containment learning
+- kept 554e6af83d docs(solutions): record rejection of context-mode plugin for omp
+- kept 0b06946a3c chore(fork): sync log for v17.3.0
+- kept 0d886d0262 chore(fork): sync log for v17.3.1
+- kept ed6ba55c49 chore(fork): sync log for v17.3.2
+- kept 889f1d044f chore(fork): sync log for v17.3.3
+- kept afcf4dc7e9 chore(fork): sync log for v17.3.4
+- kept 2dceae1489 chore(fork): sync log for v17.3.5
+- kept b6c1ab681c chore(fork): sync log for v17.3.7
+- kept 313428d1fc chore(fork): sync log for v17.3.8
+- kept e9f37ce349 fix(ai): always emit context_length/max_tokens (null fallback) on gateway /v1/models
+- kept 7ea8cf9d6b fix(sync): fall back to bazel-built natives when npm publish lags the upstream tag
+- kept c269775d83 chore(fork): sync log for v17.4.0
+- kept 60478a7d25 chore(fork): sync log for v17.4.1
+- kept 37efbf895b refactor(sync): classify fork records by file paths only, drop subject check
+- kept 5aa8091010 chore(fork): sync log for v17.4.2
+- kept cb427bc5d2 feat(sync): record manual-review acceptances in a durable patch-id ledger
+- kept 68f73a9f2c chore(fork): sync log for v18.0.0
+
+### 2026-08-22 — v17.4.2 → v18.0.0
+
+- kept 8e8256e3b3 feat(ai): enforce Cursor execution policy rejections
+- kept 61b845ea01 fix(ai,coding-agent): normalize gateway model catalog metadata
+- kept 776613bdf8 chore(dev): preserve fork-local development configuration
+- kept d252b1ff45 fix(natives): diagnose and safely promote workspace addons
+- kept f92927ad4d chore(fork): automate parentless syncs with verified npm natives
+- kept 1c4bc67323 chore(fork): sync log for v17.2.5
+- kept 38484cbd52 docs(fork): retire macOS 27 Bazel overlay in favor of npm-native syncs
+- kept 5ecc431b59 chore(fork): sync log for v17.2.7
+- kept 94209d9fb2 chore(fork): sync log for v17.2.8
+- kept c3e1dbc5a0 chore(fork): promote automatically once sync verification passes
+- kept 4adf7c9607 chore(fork): sync log for v17.2.9
+- kept 40270ce76a chore(dev): pin the shared mnemopi bank for worktree sessions
+- kept 42ef79e0b1 chore(fork): sync log for v17.2.10
+- kept a2cda1fa02 fix(sync): clear stale unregistered worktree directories
+- kept 75dd8cccd5 chore(fork): sync log for v17.2.11
+- kept 88879a3f8b chore(fork): sync log for v17.2.12
+- kept 2f03576233 chore(fork): sync log for v17.2.13
+- kept a0e30d41b4 chore(fork): sync log for v17.2.14
+- kept d573457f1c fix(coding-agent): decide non-symlink containment by the parent directory
+- kept 2f1073c6e0 chore(fork): sync log for v17.2.15
+- kept dadb4d3ffd docs(solutions): capture macOS hard-link realpath containment learning
+- kept bc3edd22e4 docs(solutions): record rejection of context-mode plugin for omp
+- kept 581fd18774 chore(fork): sync log for v17.3.0
+- kept 12731a7cf0 chore(fork): sync log for v17.3.1
+- kept 3b4d56e150 chore(fork): sync log for v17.3.2
+- kept b44baa35c3 chore(fork): sync log for v17.3.3
+- kept ef6b58821c chore(fork): sync log for v17.3.4
+- kept 85d7fbef63 chore(fork): sync log for v17.3.5
+- kept f17ce4a105 chore(fork): sync log for v17.3.7
+- kept f5e887cf50 chore(fork): sync log for v17.3.8
+- kept cac6900c42 fix(ai): always emit context_length/max_tokens (null fallback) on gateway /v1/models
+- kept 5871df0964 fix(sync): fall back to bazel-built natives when npm publish lags the upstream tag
+- kept 8046238e38 chore(fork): sync log for v17.4.0
+- kept a387d0890a chore(fork): sync log for v17.4.1
+- kept cc9db382dd refactor(sync): classify fork records by file paths only, drop subject check
+- kept f6b59042b1 chore(fork): sync log for v17.4.2
+- kept 1be47539c9 feat(sync): record manual-review acceptances in a durable patch-id ledger
+
+### 2026-08-21 — v17.4.1 → v17.4.2
+
+- kept 2353e3f6bf feat(ai): enforce Cursor execution policy rejections
+- kept 467684a513 fix(ai,coding-agent): normalize gateway model catalog metadata
+- kept 06b2839a13 chore(dev): preserve fork-local development configuration
+- kept 2974be1fc2 fix(natives): diagnose and safely promote workspace addons
+- kept 62ae28680c chore(fork): automate parentless syncs with verified npm natives
+- kept d118010378 chore(fork): sync log for v17.2.5
+- kept b925de0f63 docs(fork): retire macOS 27 Bazel overlay in favor of npm-native syncs
+- kept a8b0bb6f35 chore(fork): sync log for v17.2.7
+- kept 9339017cfb chore(fork): sync log for v17.2.8
+- kept b89875de12 chore(fork): promote automatically once sync verification passes
+- kept 4a8999d499 chore(fork): sync log for v17.2.9
+- kept 5bc8867bfc chore(dev): pin the shared mnemopi bank for worktree sessions
+- kept f2fa1fce5a chore(fork): sync log for v17.2.10
+- kept 8e77b7f45b fix(sync): clear stale unregistered worktree directories
+- kept 0d9035ae88 chore(fork): sync log for v17.2.11
+- kept 18841a9871 chore(fork): sync log for v17.2.12
+- kept 8b4afb7b30 chore(fork): sync log for v17.2.13
+- kept b911459e9b chore(fork): sync log for v17.2.14
+- kept 4ae9fb6cdc fix(coding-agent): decide non-symlink containment by the parent directory
+- kept 4d2d987744 chore(fork): sync log for v17.2.15
+- kept 23620178de docs(solutions): capture macOS hard-link realpath containment learning
+- kept 5ab6638173 docs(solutions): record rejection of context-mode plugin for omp
+- kept 53bf934d5e chore(fork): sync log for v17.3.0
+- kept 34df59597b chore(fork): sync log for v17.3.1
+- kept 1224b5b0e0 chore(fork): sync log for v17.3.2
+- kept fd5c0574c6 chore(fork): sync log for v17.3.3
+- kept bc25b12396 chore(fork): sync log for v17.3.4
+- kept c15006e633 chore(fork): sync log for v17.3.5
+- kept bca62cc930 chore(fork): sync log for v17.3.7
+- kept d43fde2122 chore(fork): sync log for v17.3.8
+- kept 58327fe1a3 fix(ai): always emit context_length/max_tokens (null fallback) on gateway /v1/models
+- kept eac082cb71 fix(sync): fall back to bazel-built natives when npm publish lags the upstream tag
+- kept fb113f34df chore(fork): sync log for v17.4.0
+- kept b3506d46d9 chore(fork): sync log for v17.4.1
+- kept ba38134bfa refactor(sync): classify fork records by file paths only, drop subject check
+- note: eac082cb71 fix(sync): fall back to bazel-built natives when npm publish lags the upstream tag (no owned tests — manual review)
+
+### 2026-08-21 — v17.4.0 → v17.4.1
+
+- kept 27c70672c5 feat(ai): enforce Cursor execution policy rejections
+- kept cbc66274c4 fix(ai,coding-agent): normalize gateway model catalog metadata
+- kept e35830a2d9 chore(dev): preserve fork-local development configuration
+- kept 2971060211 fix(natives): diagnose and safely promote workspace addons
+- kept de932fba19 chore(fork): automate parentless syncs with verified npm natives
+- kept 508081a58a chore(fork): sync log for v17.2.5
+- kept f82084f913 docs(fork): retire macOS 27 Bazel overlay in favor of npm-native syncs
+- kept 97d0cb134b chore(fork): sync log for v17.2.7
+- kept ba2d016a9b chore(fork): sync log for v17.2.8
+- kept 85b371f435 chore(fork): promote automatically once sync verification passes
+- kept 1b25a7c9bb chore(fork): sync log for v17.2.9
+- kept 40e7298347 chore(dev): pin the shared mnemopi bank for worktree sessions
+- kept b114fc5cd6 chore(fork): sync log for v17.2.10
+- kept 7fca17b0ab fix(sync): clear stale unregistered worktree directories
+- kept 7241acfeba chore(fork): sync log for v17.2.11
+- kept 21b756be8a chore(fork): sync log for v17.2.12
+- kept 14d5aa4495 chore(fork): sync log for v17.2.13
+- kept 091edb540a chore(fork): sync log for v17.2.14
+- kept 60264f9310 fix(coding-agent): decide non-symlink containment by the parent directory
+- kept 472729ae75 chore(fork): sync log for v17.2.15
+- kept 71672ca473 docs(solutions): capture macOS hard-link realpath containment learning
+- kept d3c5995d24 docs(solutions): record rejection of context-mode plugin for omp
+- kept 9df0f0d2c4 chore(fork): sync log for v17.3.0
+- kept de62affac2 chore(fork): sync log for v17.3.1
+- kept 4bee9e45e5 chore(fork): sync log for v17.3.2
+- kept 26c516845f chore(fork): sync log for v17.3.3
+- kept 97bb8de7aa chore(fork): sync log for v17.3.4
+- kept 22870d8822 chore(fork): sync log for v17.3.5
+- kept 9cd8b6f061 chore(fork): sync log for v17.3.7
+- kept 4c99a96e84 chore(fork): sync log for v17.3.8
+- kept 75930d9402 fix(ai): always emit context_length/max_tokens (null fallback) on gateway /v1/models
+- kept 568503d2e2 fix(sync): fall back to bazel-built natives when npm publish lags the upstream tag
+- kept 858e0d4784 chore(fork): sync log for v17.4.0
+
+### 2026-08-20 — v17.3.8 → v17.4.0
+
+- kept 93ab0042b7 feat(ai): enforce Cursor execution policy rejections
+- kept 0b4a91f8be fix(ai,coding-agent): normalize gateway model catalog metadata
+- kept a9f2112e35 chore(dev): preserve fork-local development configuration
+- kept aa92c9842a fix(natives): diagnose and safely promote workspace addons
+- kept a3b431b685 chore(fork): automate parentless syncs with verified npm natives
+- kept 5599221f73 chore(fork): sync log for v17.2.5
+- kept adc913be1f docs(fork): retire macOS 27 Bazel overlay in favor of npm-native syncs
+- kept 8e609bcdce chore(fork): sync log for v17.2.7
+- kept 3738d095a0 chore(fork): sync log for v17.2.8
+- kept e74852484a chore(fork): promote automatically once sync verification passes
+- kept ed5f554093 chore(fork): sync log for v17.2.9
+- kept f9059aae44 chore(dev): pin the shared mnemopi bank for worktree sessions
+- kept e07f07a7b5 chore(fork): sync log for v17.2.10
+- kept 2bcf74a630 fix(sync): clear stale unregistered worktree directories
+- kept c3bde09874 chore(fork): sync log for v17.2.11
+- kept 9ccfc7cb18 chore(fork): sync log for v17.2.12
+- kept 76916237c1 chore(fork): sync log for v17.2.13
+- kept 3b85f596ca chore(fork): sync log for v17.2.14
+- kept 785f9a4d17 fix(coding-agent): decide non-symlink containment by the parent directory
+- kept 659c739d26 chore(fork): sync log for v17.2.15
+- kept 7932c8216e docs(solutions): capture macOS hard-link realpath containment learning
+- kept 8704f94345 docs(solutions): record rejection of context-mode plugin for omp
+- kept 6a95df8480 chore(fork): sync log for v17.3.0
+- kept 6aa1ca3092 chore(fork): sync log for v17.3.1
+- kept 43e9112f73 chore(fork): sync log for v17.3.2
+- kept e1e29f6a7e chore(fork): sync log for v17.3.3
+- kept 35d74a00e3 chore(fork): sync log for v17.3.4
+- kept 193e5f5961 chore(fork): sync log for v17.3.5
+- kept f48bc612ca chore(fork): sync log for v17.3.7
+- kept 4470dcd605 chore(fork): sync log for v17.3.8
+- kept 097958a196 fix(ai): always emit context_length/max_tokens (null fallback) on gateway /v1/models
+- kept 1edec27723 fix(sync): fall back to bazel-built natives when npm publish lags the upstream tag
+
+### 2026-08-19 — v17.3.7 → v17.3.8
+
+- kept 71fc9b05da feat(ai): enforce Cursor execution policy rejections
+- kept d174efbbe3 fix(ai,coding-agent): normalize gateway model catalog metadata
+- kept a3fa3a4f17 chore(dev): preserve fork-local development configuration
+- kept af12267e57 fix(natives): diagnose and safely promote workspace addons
+- kept 80d6141f4e chore(fork): automate parentless syncs with verified npm natives
+- kept 87ac53fc17 chore(fork): sync log for v17.2.5
+- kept 89f8784ce2 docs(fork): retire macOS 27 Bazel overlay in favor of npm-native syncs
+- kept 39f581c808 chore(fork): sync log for v17.2.7
+- kept a04fa3f994 chore(fork): sync log for v17.2.8
+- kept 22e338f9f7 chore(fork): promote automatically once sync verification passes
+- kept 3f0ec95953 chore(fork): sync log for v17.2.9
+- kept 6e3b9037cd chore(dev): pin the shared mnemopi bank for worktree sessions
+- kept a7ec147aeb chore(fork): sync log for v17.2.10
+- kept 12705f904e fix(sync): clear stale unregistered worktree directories
+- kept f984c364b3 chore(fork): sync log for v17.2.11
+- kept 8b9952890a chore(fork): sync log for v17.2.12
+- kept 37681d1d84 chore(fork): sync log for v17.2.13
+- kept 4dafc25396 chore(fork): sync log for v17.2.14
+- kept 71b131d6b7 fix(coding-agent): decide non-symlink containment by the parent directory
+- kept d9b550e866 chore(fork): sync log for v17.2.15
+- kept cc1aef742e docs(solutions): capture macOS hard-link realpath containment learning
+- kept 09fb417dee docs(solutions): record rejection of context-mode plugin for omp
+- kept f609992700 chore(fork): sync log for v17.3.0
+- kept 14addfb159 chore(fork): sync log for v17.3.1
+- kept 6a296e7aaf chore(fork): sync log for v17.3.2
+- kept a5e79bd47f chore(fork): sync log for v17.3.3
+- kept ad05e5cef4 chore(fork): sync log for v17.3.4
+- kept 51428f1d9d chore(fork): sync log for v17.3.5
+- kept fd19848f1a chore(fork): sync log for v17.3.7
+- note: cc1aef742e docs(solutions): capture macOS hard-link realpath containment learning (no owned tests — manual review)
+- note: 09fb417dee docs(solutions): record rejection of context-mode plugin for omp (no owned tests — manual review)
+
+### 2026-08-18 — v17.3.5 → v17.3.7
+
+- kept 600d1a2fc5 feat(ai): enforce Cursor execution policy rejections
+- kept bbccf74750 fix(ai,coding-agent): normalize gateway model catalog metadata
+- kept 26dedf29da chore(dev): preserve fork-local development configuration
+- kept 5556ad1fcb fix(natives): diagnose and safely promote workspace addons
+- kept eb0f8e975a chore(fork): automate parentless syncs with verified npm natives
+- kept 1bfd1aadf9 chore(fork): sync log for v17.2.5
+- kept f274e2c9d8 docs(fork): retire macOS 27 Bazel overlay in favor of npm-native syncs
+- kept 7ac9569d07 chore(fork): sync log for v17.2.7
+- kept 83ed573ef5 chore(fork): sync log for v17.2.8
+- kept 562ddb253e chore(fork): promote automatically once sync verification passes
+- kept b6a49a2cc1 chore(fork): sync log for v17.2.9
+- kept c05a5ecbfc chore(dev): pin the shared mnemopi bank for worktree sessions
+- kept 1d54b8cff6 chore(fork): sync log for v17.2.10
+- kept df3cac0dc1 fix(sync): clear stale unregistered worktree directories
+- kept 1614e58fcc chore(fork): sync log for v17.2.11
+- kept 8c639a7704 chore(fork): sync log for v17.2.12
+- kept 504198be6c chore(fork): sync log for v17.2.13
+- kept 49a26f131f chore(fork): sync log for v17.2.14
+- kept 4128de205d fix(coding-agent): decide non-symlink containment by the parent directory
+- kept 58139d163f chore(fork): sync log for v17.2.15
+- kept 550e120120 docs(solutions): capture macOS hard-link realpath containment learning
+- kept bd59b56b91 docs(solutions): record rejection of context-mode plugin for omp
+- kept 55a44dcf17 chore(fork): sync log for v17.3.0
+- kept 1e0a88867c chore(fork): sync log for v17.3.1
+- kept 2f06cb595d chore(fork): sync log for v17.3.2
+- kept b522ebf1bc chore(fork): sync log for v17.3.3
+- kept 49b771f429 chore(fork): sync log for v17.3.4
+- kept 02aae10be2 chore(fork): sync log for v17.3.5
+- note: 550e120120 docs(solutions): capture macOS hard-link realpath containment learning (no owned tests — manual review)
+- note: bd59b56b91 docs(solutions): record rejection of context-mode plugin for omp (no owned tests — manual review)
+
+### 2026-08-16 — v17.3.4 → v17.3.5
+
+- kept 04ebe14645 feat(ai): enforce Cursor execution policy rejections
+- kept f14765d63f fix(ai,coding-agent): normalize gateway model catalog metadata
+- kept 3744f9dfac chore(dev): preserve fork-local development configuration
+- kept 3cf8f3c636 fix(natives): diagnose and safely promote workspace addons
+- kept b126e5d42f chore(fork): automate parentless syncs with verified npm natives
+- kept 9b2a7cc4b0 chore(fork): sync log for v17.2.5
+- kept aa8d61b4c4 docs(fork): retire macOS 27 Bazel overlay in favor of npm-native syncs
+- kept cc3c9699b5 chore(fork): sync log for v17.2.7
+- kept 82e9a4c0be chore(fork): sync log for v17.2.8
+- kept e02422184c chore(fork): promote automatically once sync verification passes
+- kept de82a0012c chore(fork): sync log for v17.2.9
+- kept 9ac3191a3f chore(dev): pin the shared mnemopi bank for worktree sessions
+- kept 86bf49df4d chore(fork): sync log for v17.2.10
+- kept 90b31f3a81 fix(sync): clear stale unregistered worktree directories
+- kept d66d6c6577 chore(fork): sync log for v17.2.11
+- kept 9845dc24d4 chore(fork): sync log for v17.2.12
+- kept 98fcf6782d chore(fork): sync log for v17.2.13
+- kept 1a2b394312 chore(fork): sync log for v17.2.14
+- kept 256df3589f fix(coding-agent): decide non-symlink containment by the parent directory
+- kept 103535705c chore(fork): sync log for v17.2.15
+- kept d647fb8c5e docs(solutions): capture macOS hard-link realpath containment learning
+- kept e207e02aa1 docs(solutions): record rejection of context-mode plugin for omp
+- kept 3fa89cf0e8 chore(fork): sync log for v17.3.0
+- kept 46f1d163be chore(fork): sync log for v17.3.1
+- kept a88ffc357e chore(fork): sync log for v17.3.2
+- kept 90c5904dbb chore(fork): sync log for v17.3.3
+- kept ac76104244 chore(fork): sync log for v17.3.4
+- note: d647fb8c5e docs(solutions): capture macOS hard-link realpath containment learning (no owned tests — manual review)
+- note: e207e02aa1 docs(solutions): record rejection of context-mode plugin for omp (no owned tests — manual review)
+
+### 2026-08-14 — v17.3.3 → v17.3.4
+
+- kept 38a30a2b01 feat(ai): enforce Cursor execution policy rejections
+- kept bf3b015c88 fix(ai,coding-agent): normalize gateway model catalog metadata
+- kept fd56572ef6 chore(dev): preserve fork-local development configuration
+- kept f822b60c29 fix(natives): diagnose and safely promote workspace addons
+- kept 6a8e49fa26 chore(fork): automate parentless syncs with verified npm natives
+- kept 2c85ba373a chore(fork): sync log for v17.2.5
+- kept d85156c3c6 docs(fork): retire macOS 27 Bazel overlay in favor of npm-native syncs
+- kept a291977750 chore(fork): sync log for v17.2.7
+- kept 1a7d592273 chore(fork): sync log for v17.2.8
+- kept 47a89dbb3d chore(fork): promote automatically once sync verification passes
+- kept f23585ca3b chore(fork): sync log for v17.2.9
+- kept 1741dcf3eb chore(dev): pin the shared mnemopi bank for worktree sessions
+- kept b92d680cec chore(fork): sync log for v17.2.10
+- kept 51dfad44e6 fix(sync): clear stale unregistered worktree directories
+- kept e7c8c9ce9e chore(fork): sync log for v17.2.11
+- kept d16da57143 chore(fork): sync log for v17.2.12
+- kept 5d50584309 chore(fork): sync log for v17.2.13
+- kept fb5a3b073d chore(fork): sync log for v17.2.14
+- kept 886572c5bd fix(coding-agent): decide non-symlink containment by the parent directory
+- kept eae8fa49c3 chore(fork): sync log for v17.2.15
+- kept 43d405d551 docs(solutions): capture macOS hard-link realpath containment learning
+- kept c5387c0e1b docs(solutions): record rejection of context-mode plugin for omp
+- kept 773c5c25ff chore(fork): sync log for v17.3.0
+- kept 9bceedde95 chore(fork): sync log for v17.3.1
+- kept 17a01efb5d chore(fork): sync log for v17.3.2
+- kept e9c41d2323 chore(fork): sync log for v17.3.3
+- note: 43d405d551 docs(solutions): capture macOS hard-link realpath containment learning (no owned tests — manual review)
+- note: c5387c0e1b docs(solutions): record rejection of context-mode plugin for omp (no owned tests — manual review)
+
+### 2026-08-14 — v17.3.2 → v17.3.3
+
+- kept 81c06638b5 feat(ai): enforce Cursor execution policy rejections
+- kept 0ff7d4825a fix(ai,coding-agent): normalize gateway model catalog metadata
+- kept 29f658beaa chore(dev): preserve fork-local development configuration
+- kept 063ff0c395 fix(natives): diagnose and safely promote workspace addons
+- kept c22159171b chore(fork): automate parentless syncs with verified npm natives
+- kept fada5c5627 chore(fork): sync log for v17.2.5
+- kept 3e0e5f14c8 docs(fork): retire macOS 27 Bazel overlay in favor of npm-native syncs
+- kept 2f9a126c0a chore(fork): sync log for v17.2.7
+- kept 8a08936e24 chore(fork): sync log for v17.2.8
+- kept 248083dabb chore(fork): promote automatically once sync verification passes
+- kept 41cbb40e15 chore(fork): sync log for v17.2.9
+- kept 3289223caf chore(dev): pin the shared mnemopi bank for worktree sessions
+- kept 043e9b4cba chore(fork): sync log for v17.2.10
+- kept 2204f79cd9 fix(sync): clear stale unregistered worktree directories
+- kept a60f3f6b73 chore(fork): sync log for v17.2.11
+- kept 0074298cb6 chore(fork): sync log for v17.2.12
+- kept 0e2e46a277 chore(fork): sync log for v17.2.13
+- kept 0cb91557bf chore(fork): sync log for v17.2.14
+- kept 9360c7ed3a fix(coding-agent): decide non-symlink containment by the parent directory
+- kept bbf516720b chore(fork): sync log for v17.2.15
+- kept d07b148db4 docs(solutions): capture macOS hard-link realpath containment learning
+- kept e4ea00827e docs(solutions): record rejection of context-mode plugin for omp
+- kept 89dbf53c8e chore(fork): sync log for v17.3.0
+- kept 43acef283c chore(fork): sync log for v17.3.1
+- kept efa80d60dc chore(fork): sync log for v17.3.2
+- note: d07b148db4 docs(solutions): capture macOS hard-link realpath containment learning (no owned tests — manual review)
+- note: e4ea00827e docs(solutions): record rejection of context-mode plugin for omp (no owned tests — manual review)
+
+### 2026-08-14 — v17.3.1 → v17.3.2
+
+- kept 6f8aa0f36f feat(ai): enforce Cursor execution policy rejections
+- kept 627d7b6dac fix(ai,coding-agent): normalize gateway model catalog metadata
+- kept 610df39e94 chore(dev): preserve fork-local development configuration
+- kept 155557d2c3 fix(natives): diagnose and safely promote workspace addons
+- kept a39a06c12a chore(fork): automate parentless syncs with verified npm natives
+- kept 329e17aabe chore(fork): sync log for v17.2.5
+- kept 3f8855cb17 docs(fork): retire macOS 27 Bazel overlay in favor of npm-native syncs
+- kept daf80f2088 chore(fork): sync log for v17.2.7
+- kept 67ee693a64 chore(fork): sync log for v17.2.8
+- kept 28fb39d0cd chore(fork): promote automatically once sync verification passes
+- kept 7dcdbcf100 chore(fork): sync log for v17.2.9
+- kept 3b7dde0f00 chore(dev): pin the shared mnemopi bank for worktree sessions
+- kept 46cf44fb8c chore(fork): sync log for v17.2.10
+- kept 8e7829700b fix(sync): clear stale unregistered worktree directories
+- kept c62a69f193 chore(fork): sync log for v17.2.11
+- kept c9e5488010 chore(fork): sync log for v17.2.12
+- kept 7f2cdf59eb chore(fork): sync log for v17.2.13
+- kept bd891b6df0 chore(fork): sync log for v17.2.14
+- kept 3b87ff4b75 fix(coding-agent): decide non-symlink containment by the parent directory
+- kept 10367f173e chore(fork): sync log for v17.2.15
+- kept 03e5d821e6 docs(solutions): capture macOS hard-link realpath containment learning
+- kept 0e222c615c docs(solutions): record rejection of context-mode plugin for omp
+- kept 0e4bf353a7 chore(fork): sync log for v17.3.0
+- kept e83fe7bbe9 chore(fork): sync log for v17.3.1
+- note: 03e5d821e6 docs(solutions): capture macOS hard-link realpath containment learning (no owned tests — manual review)
+- note: 0e222c615c docs(solutions): record rejection of context-mode plugin for omp (no owned tests — manual review)
+
+### 2026-08-13 — v17.3.0 → v17.3.1
+
+- kept 6b0ae3ab4 feat(ai): enforce Cursor execution policy rejections
+- kept 2d183bb43 fix(ai,coding-agent): normalize gateway model catalog metadata
+- kept e85d6cc13 chore(dev): preserve fork-local development configuration
+- kept d5f9e1ee3 fix(natives): diagnose and safely promote workspace addons
+- kept 23d015874 chore(fork): automate parentless syncs with verified npm natives
+- kept 32c2688f6 chore(fork): sync log for v17.2.5
+- kept 336f06bfb docs(fork): retire macOS 27 Bazel overlay in favor of npm-native syncs
+- kept 92efd8834 chore(fork): sync log for v17.2.7
+- kept b9e5a1e62 chore(fork): sync log for v17.2.8
+- kept d9b65a41e chore(fork): promote automatically once sync verification passes
+- kept 3f0311c72 chore(fork): sync log for v17.2.9
+- kept 50a8a60e2 chore(dev): pin the shared mnemopi bank for worktree sessions
+- kept 9e1b8663a chore(fork): sync log for v17.2.10
+- kept d26d551fe fix(sync): clear stale unregistered worktree directories
+- kept a366a641f chore(fork): sync log for v17.2.11
+- kept eaf8fd9ef chore(fork): sync log for v17.2.12
+- kept 03d6eae6b chore(fork): sync log for v17.2.13
+- kept 2319c56f4 chore(fork): sync log for v17.2.14
+- kept 2b9645d8d fix(coding-agent): decide non-symlink containment by the parent directory
+- kept 54d1be6fa chore(fork): sync log for v17.2.15
+- kept c74083e95 docs(solutions): capture macOS hard-link realpath containment learning
+- kept a4388db50 docs(solutions): record rejection of context-mode plugin for omp
+- kept 6ffe6047e chore(fork): sync log for v17.3.0
+
+### 2026-08-13 — v17.2.15 → v17.3.0
+
+- kept 2b525c8b4 feat(ai): enforce Cursor execution policy rejections
+- kept 28e3df98c fix(ai,coding-agent): normalize gateway model catalog metadata
+- kept 8e1655584 chore(dev): preserve fork-local development configuration
+- kept c87b3d1ce fix(natives): diagnose and safely promote workspace addons
+- kept 8b05d81ce chore(fork): automate parentless syncs with verified npm natives
+- kept f350c5d0c chore(fork): sync log for v17.2.5
+- kept b7dd9165a docs(fork): retire macOS 27 Bazel overlay in favor of npm-native syncs
+- kept 2ccfbde0d chore(fork): sync log for v17.2.7
+- kept 74d41f1a6 chore(fork): sync log for v17.2.8
+- kept f773f7b2c chore(fork): promote automatically once sync verification passes
+- kept c3fca59d8 chore(fork): sync log for v17.2.9
+- kept 1dadc6df4 chore(dev): pin the shared mnemopi bank for worktree sessions
+- kept ca0344709 chore(fork): sync log for v17.2.10
+- kept 7f1db79f2 fix(sync): clear stale unregistered worktree directories
+- kept 2868cb166 chore(fork): sync log for v17.2.11
+- kept 7a3627cdb chore(fork): sync log for v17.2.12
+- kept 2c437c200 chore(fork): sync log for v17.2.13
+- kept 88ebd9e92 chore(fork): sync log for v17.2.14
+- kept 06db3ca6f fix(coding-agent): decide non-symlink containment by the parent directory
+- kept 11664c38b chore(fork): sync log for v17.2.15
+- kept 2b2bcaeab docs(solutions): capture macOS hard-link realpath containment learning
+- kept 57cd65839 docs(solutions): record rejection of context-mode plugin for omp
+- note: 2b2bcaeab docs(solutions): capture macOS hard-link realpath containment learning (no owned tests — manual review)
+- note: 57cd65839 docs(solutions): record rejection of context-mode plugin for omp (no owned tests — manual review)
+
+### 2026-08-12 — v17.2.14 → v17.2.15
+
+- kept 7bfa4aa7a feat(ai): enforce Cursor execution policy rejections
+- kept a61272fe2 fix(ai,coding-agent): normalize gateway model catalog metadata
+- kept e02647655 chore(dev): preserve fork-local development configuration
+- kept 95eb1e802 fix(natives): diagnose and safely promote workspace addons
+- kept 13e005a13 chore(fork): automate parentless syncs with verified npm natives
+- kept 1d856808f chore(fork): sync log for v17.2.5
+- kept cd822c872 docs(fork): retire macOS 27 Bazel overlay in favor of npm-native syncs
+- kept d048c61ff chore(fork): sync log for v17.2.7
+- kept c07f95732 chore(fork): sync log for v17.2.8
+- kept b111bde66 chore(fork): promote automatically once sync verification passes
+- kept 39ddc7b84 chore(fork): sync log for v17.2.9
+- kept bfc9d3274 chore(dev): pin the shared mnemopi bank for worktree sessions
+- kept 3f133f264 chore(fork): sync log for v17.2.10
+- kept 6715a5068 fix(sync): clear stale unregistered worktree directories
+- kept e082d2b16 chore(fork): sync log for v17.2.11
+- kept 467372b2d chore(fork): sync log for v17.2.12
+- kept a9379cbd7 chore(fork): sync log for v17.2.13
+- kept de12b2826 chore(fork): sync log for v17.2.14
+- kept 095fd020b fix(coding-agent): decide non-symlink containment by the parent directory
+
+### 2026-08-11 — v17.2.13 → v17.2.14
+
+- kept ca06be677 feat(ai): enforce Cursor execution policy rejections
+- kept 023476c49 fix(ai,coding-agent): normalize gateway model catalog metadata
+- kept 69afe2fab chore(dev): preserve fork-local development configuration
+- kept b64dd4b0d fix(natives): diagnose and safely promote workspace addons
+- kept 07caa2bbc chore(fork): automate parentless syncs with verified npm natives
+- kept 2bef39f4e chore(fork): sync log for v17.2.5
+- kept 2df250ab7 docs(fork): retire macOS 27 Bazel overlay in favor of npm-native syncs
+- kept ec0c8fca2 chore(fork): sync log for v17.2.7
+- kept 45774c6db chore(fork): sync log for v17.2.8
+- kept 65096e862 chore(fork): promote automatically once sync verification passes
+- kept 3c2fa65c9 chore(fork): sync log for v17.2.9
+- kept 563f5cbce chore(dev): pin the shared mnemopi bank for worktree sessions
+- kept 27cce5c7c chore(fork): sync log for v17.2.10
+- kept c022b1b3d fix(sync): clear stale unregistered worktree directories
+- kept c60f00aca chore(fork): sync log for v17.2.11
+- kept 6676ccb2a chore(fork): sync log for v17.2.12
+- kept 7abe7e8c7 chore(fork): sync log for v17.2.13
+
+### 2026-08-11 — v17.2.12 → v17.2.13
+
+- kept e17b4dad9 feat(ai): enforce Cursor execution policy rejections
+- kept 50f4f5be6 fix(ai,coding-agent): normalize gateway model catalog metadata
+- kept 8a1a8542b chore(dev): preserve fork-local development configuration
+- kept b6b2a97a7 fix(natives): diagnose and safely promote workspace addons
+- kept a2f972ea5 chore(fork): automate parentless syncs with verified npm natives
+- kept aa069783b chore(fork): sync log for v17.2.5
+- kept 11666b8bd docs(fork): retire macOS 27 Bazel overlay in favor of npm-native syncs
+- kept 606398279 chore(fork): sync log for v17.2.7
+- kept 1b063a171 chore(fork): sync log for v17.2.8
+- kept 1c15a5afb chore(fork): promote automatically once sync verification passes
+- kept 3f76b8cfd chore(fork): sync log for v17.2.9
+- kept b15178309 chore(dev): pin the shared mnemopi bank for worktree sessions
+- kept 4f144df84 chore(fork): sync log for v17.2.10
+- kept ed2fcfe79 fix(sync): clear stale unregistered worktree directories
+- kept 0a9db45a6 chore(fork): sync log for v17.2.11
+- kept 2a994f593 chore(fork): sync log for v17.2.12
+
+### 2026-08-09 — v17.2.11 → v17.2.12
+
+- kept 448f2dfdf feat(ai): enforce Cursor execution policy rejections
+- kept a9a8ca072 fix(ai,coding-agent): normalize gateway model catalog metadata
+- kept 9c5ea9af3 chore(dev): preserve fork-local development configuration
+- kept 8e0bbadfc fix(natives): diagnose and safely promote workspace addons
+- kept e26a758c0 chore(fork): automate parentless syncs with verified npm natives
+- kept 219a7880b chore(fork): sync log for v17.2.5
+- kept 7737a4ff7 docs(fork): retire macOS 27 Bazel overlay in favor of npm-native syncs
+- kept c1d66ad19 chore(fork): sync log for v17.2.7
+- kept 6d98619e1 chore(fork): sync log for v17.2.8
+- kept 25beefd64 chore(fork): promote automatically once sync verification passes
+- kept 08a1cb335 chore(fork): sync log for v17.2.9
+- kept 444c32724 chore(dev): pin the shared mnemopi bank for worktree sessions
+- kept eff1f7618 chore(fork): sync log for v17.2.10
+- kept 1d31b9f3d fix(sync): clear stale unregistered worktree directories
+- kept 01e36f14a chore(fork): sync log for v17.2.11
+
+### 2026-08-07 — v17.2.10 → v17.2.11
+
+- kept f3246b09c feat(ai): enforce Cursor execution policy rejections
+- kept c6e2f57fc fix(ai,coding-agent): normalize gateway model catalog metadata
+- kept c9f9e6598 chore(dev): preserve fork-local development configuration
+- kept 4b24e312b fix(natives): diagnose and safely promote workspace addons
+- kept 57f7a13b6 chore(fork): automate parentless syncs with verified npm natives
+- kept bf87b2f78 chore(fork): sync log for v17.2.5
+- kept 5f30e9295 docs(fork): retire macOS 27 Bazel overlay in favor of npm-native syncs
+- kept d1a48d32c chore(fork): sync log for v17.2.7
+- kept ab6b715a1 chore(fork): sync log for v17.2.8
+- kept 71eee6c9f chore(fork): promote automatically once sync verification passes
+- kept 559f9de99 chore(fork): sync log for v17.2.9
+- kept d4fcaf841 chore(dev): pin the shared mnemopi bank for worktree sessions
+- kept 89985ea93 chore(fork): sync log for v17.2.10
+- kept 6e9974ebe fix(sync): clear stale unregistered worktree directories
+
+### 2026-08-06 — v17.2.9 → v17.2.10
+
+- kept 8328eb3b3 feat(ai): enforce Cursor execution policy rejections
+- kept 080024f0f fix(ai,coding-agent): normalize gateway model catalog metadata
+- kept 26755674a chore(dev): preserve fork-local development configuration
+- kept b9db612f4 fix(natives): diagnose and safely promote workspace addons
+- kept bc19c210a chore(fork): automate parentless syncs with verified npm natives
+- kept 0380cd34c chore(fork): sync log for v17.2.5
+- kept ee82707eb docs(fork): retire macOS 27 Bazel overlay in favor of npm-native syncs
+- kept d6bfc287e chore(fork): sync log for v17.2.7
+- kept a82b63b76 chore(fork): sync log for v17.2.8
+- kept b4a6350ab chore(fork): promote automatically once sync verification passes
+- kept 8a0fc0d29 chore(fork): sync log for v17.2.9
+- kept 10a1712c5 chore(dev): pin the shared mnemopi bank for worktree sessions
+
+### 2026-08-05 — v17.2.8 → v17.2.9
+
+- kept 9086b3fab feat(ai): enforce Cursor execution policy rejections
+- kept befc98147 fix(ai,coding-agent): normalize gateway model catalog metadata
+- kept f8d4e8a08 chore(dev): preserve fork-local development configuration
+- kept dd839aa07 fix(natives): diagnose and safely promote workspace addons
+- kept 39d0b6924 chore(fork): automate parentless syncs with verified npm natives
+- kept 33d11a182 chore(fork): sync log for v17.2.5
+- kept 2e498c54c docs(fork): retire macOS 27 Bazel overlay in favor of npm-native syncs
+- kept 0abbb3e1e chore(fork): sync log for v17.2.7
+- kept 06b3471bf chore(fork): sync log for v17.2.8
+- kept 7ed339386 chore(fork): promote automatically once sync verification passes
+
+### 2026-08-04 — v17.2.7 → v17.2.8
+
+- kept 94c60b79a feat(ai): enforce Cursor execution policy rejections
+- kept 6f316f672 fix(ai,coding-agent): normalize gateway model catalog metadata
+- kept 66bb77f77 chore(dev): preserve fork-local development configuration
+- kept 92c105355 fix(natives): diagnose and safely promote workspace addons
+- kept 3686a9eb3 chore(fork): automate parentless syncs with verified npm natives
+- kept c70e51ac8 chore(fork): sync log for v17.2.5
+- kept 066a76254 docs(fork): retire macOS 27 Bazel overlay in favor of npm-native syncs
+- kept 9e7e61bdf chore(fork): sync log for v17.2.7
+
+### 2026-08-04 — v17.2.5 → v17.2.7
+
+- kept adabf10db feat(ai): enforce Cursor execution policy rejections
+- kept cc71d71d1 fix(ai,coding-agent): normalize gateway model catalog metadata
+- kept 66d1162cf chore(dev): preserve fork-local development configuration
+- kept 4a4ff73bf fix(natives): diagnose and safely promote workspace addons
+- kept 5a3fad538 chore(fork): automate parentless syncs with verified npm natives
+- kept 09f09387b chore(fork): sync log for v17.2.5
+- kept 6e4da7314 docs(fork): retire macOS 27 Bazel overlay in favor of npm-native syncs
+
 ### 2026-08-03 — post-v17.2.5 restack (npm-only native syncs)
 
 - dropped `build(natives): keep local Bazel builds working on macOS 27` (macOS 27 Bazel toolchain overlay: MODULE.bazel, crates/pi-natives/BUILD.bazel, crates/pi-shell/src/process.rs let-chain refactor) — build-time only, unnecessary under npm-mode syncs
