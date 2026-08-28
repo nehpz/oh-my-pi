@@ -191,6 +191,20 @@ export function assertCleanTree(porcelain: string): void {
 	}
 }
 
+/**
+ * Null when a repo-local git identity is pinned, else an actionable error message.
+ * Fork commits must never pick up ambient (global/includeIf) identity — a local
+ * pin always wins, so requiring one makes identity drift impossible.
+ */
+export function checkLocalIdentityPinned(localName: string, localEmail: string): string | null {
+	if (localName && localEmail) return null;
+	return [
+		"no repo-local git identity pinned; ambient config can leak the wrong identity into fork commits.",
+		"pin the fork identity before syncing:",
+		"  git config --local user.name <name> && git config --local user.email <email>",
+	].join("\n");
+}
+
 /** Human-readable conflict report naming the stuck patch. */
 export function formatConflictReport(patch: Patch, applied: Patch[], remaining: Patch[]): string {
 	const lines = [
@@ -501,6 +515,11 @@ async function changedFilesOf(sha: string, cwd: string = repoRoot): Promise<stri
 async function preflight(version: string): Promise<{ baseTag: string; alreadyBased: boolean }> {
 	const status = await git(["status", "--porcelain"]).quiet();
 	assertCleanTree(status.text());
+
+	const localName = (await git(["config", "--local", "user.name"]).quiet().nothrow()).text().trim();
+	const localEmail = (await git(["config", "--local", "user.email"]).quiet().nothrow()).text().trim();
+	const identityError = checkLocalIdentityPinned(localName, localEmail);
+	if (identityError) throw new Error(identityError);
 
 	await ensureUpstreamRemote();
 
