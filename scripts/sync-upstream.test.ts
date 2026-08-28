@@ -6,6 +6,7 @@ import { $ } from "bun";
 import type { Patch } from "./sync-upstream";
 import {
 	assertCleanTree,
+	checkLocalIdentityPinned,
 	classifyNativeContractImpact,
 	classifyNoTestsPatch,
 	classifyNpmNativeAcquisitionError,
@@ -264,6 +265,15 @@ describe("assertCleanTree", () => {
 	it("allows untracked files but refuses tracked changes with a named error", () => {
 		expect(() => assertCleanTree("?? docs/plans/\n")).not.toThrow();
 		expect(() => assertCleanTree(" M packages/ai/src/types.ts\n?? scratch.txt\n")).toThrow(/working tree not clean/);
+	});
+});
+
+describe("checkLocalIdentityPinned", () => {
+	it("requires a repo-local identity so ambient config cannot leak into fork commits", () => {
+		expect(checkLocalIdentityPinned("Fork Bot", "fork@example.invalid")).toBeNull();
+		expect(checkLocalIdentityPinned("", "")).toMatch(/no repo-local git identity[\s\S]*git config --local/);
+		expect(checkLocalIdentityPinned("Fork Bot", "")).toMatch(/no repo-local git identity/);
+		expect(checkLocalIdentityPinned("", "fork@example.invalid")).toMatch(/no repo-local git identity/);
 	});
 });
 
