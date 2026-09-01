@@ -98,6 +98,29 @@ For any future local change:
 
 <!-- Appended by scripts/sync-upstream.ts; newest first. -->
 
+### 2026-09-01 — v18.0.11 → v18.1.0
+
+- kept c7e500fad8 feat(ai): enforce Cursor execution policy rejections
+- kept d3ca4444bf fix(ai,coding-agent): normalize gateway model catalog metadata
+- kept cb6425286f chore(dev): preserve fork-local development configuration
+- kept 85207acb2c fix(natives): diagnose and safely promote workspace addons
+- kept ed7a83473d chore(fork): automate parentless syncs with verified npm natives
+- kept 2e83f3db6d docs(fork): retire macOS 27 Bazel overlay in favor of npm-native syncs
+- kept 76733cc0d8 chore(fork): promote automatically once sync verification passes
+- kept ba9b05cd65 chore(dev): pin the shared mnemopi bank for worktree sessions
+- kept b92f663e20 fix(sync): clear stale unregistered worktree directories
+- kept f947849370 fix(coding-agent): decide non-symlink containment by the parent directory
+- kept 63f1740556 docs(solutions): capture macOS hard-link realpath containment learning
+- kept a3960cd360 docs(solutions): record rejection of context-mode plugin for omp
+- kept 6f983dbd34 fix(ai): always emit context_length/max_tokens (null fallback) on gateway /v1/models
+- kept 696e786421 fix(sync): fall back to bazel-built natives when npm publish lags the upstream tag
+- kept 85bedd39ab refactor(sync): classify fork records by file paths only, drop subject check
+- kept 110bbe74ab feat(sync): record manual-review acceptances in a durable patch-id ledger
+- kept 7d78867f53 fix(ai): strip uniqueItems from Google/Antigravity tool schemas
+- kept 33a1732e01 feat(sync): require pinned repo-local git identity and add sync-log squash script
+- kept f62755ce09 chore(fork): consolidate sync log through v18.0.10
+- kept 67a2acfabc chore(fork): sync log for v18.0.11
+
 ### 2026-08-29 — v18.0.10 → v18.0.11
 
 - kept 4ccf5253c4 feat(ai): enforce Cursor execution policy rejections
