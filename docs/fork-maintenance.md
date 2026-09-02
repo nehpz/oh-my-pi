@@ -98,6 +98,33 @@ For any future local change:
 
 <!-- Appended by scripts/sync-upstream.ts; newest first. -->
 
+### 2026-09-02 — v18.1.3 → v18.1.4
+
+- kept 1afee10e36 feat(ai): enforce Cursor execution policy rejections
+- kept dea2d098cc fix(ai,coding-agent): normalize gateway model catalog metadata
+- kept 37c7646597 chore(dev): preserve fork-local development configuration
+- kept 6fb1fb9600 fix(natives): diagnose and safely promote workspace addons
+- kept 0dd2b02d92 chore(fork): automate parentless syncs with verified npm natives
+- kept 5f7cd39c39 docs(fork): retire macOS 27 Bazel overlay in favor of npm-native syncs
+- kept c764b73dbe chore(fork): promote automatically once sync verification passes
+- kept c41db6840b chore(dev): pin the shared mnemopi bank for worktree sessions
+- kept 8c6e584fb0 fix(sync): clear stale unregistered worktree directories
+- kept 50c3f0c057 fix(coding-agent): decide non-symlink containment by the parent directory
+- kept d04a2266e8 docs(solutions): capture macOS hard-link realpath containment learning
+- kept 603763c785 docs(solutions): record rejection of context-mode plugin for omp
+- kept 938b025264 fix(ai): always emit context_length/max_tokens (null fallback) on gateway /v1/models
+- kept 959ed9b896 fix(sync): fall back to bazel-built natives when npm publish lags the upstream tag
+- kept 1bbb1f4174 refactor(sync): classify fork records by file paths only, drop subject check
+- kept 51e9b443c2 feat(sync): record manual-review acceptances in a durable patch-id ledger
+- kept 86399517ff fix(ai): strip uniqueItems from Google/Antigravity tool schemas
+- kept 484547206d feat(sync): require pinned repo-local git identity and add sync-log squash script
+- kept f5e332c0d2 chore(fork): consolidate sync log through v18.0.10
+- kept 6f449d2606 chore(fork): sync log for v18.0.11
+- kept 596f9f3e2c chore(fork): sync log for v18.1.0
+- kept de7158ff0e chore(fork): sync log for v18.1.1
+- kept 4498c3fc30 chore(fork): sync log for v18.1.2
+- kept 32711abf14 chore(fork): sync log for v18.1.3
+
 ### 2026-09-02 — v18.1.2 → v18.1.3
 
 - kept 321e317c1d feat(ai): enforce Cursor execution policy rejections
