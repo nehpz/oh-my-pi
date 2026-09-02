@@ -98,6 +98,31 @@ For any future local change:
 
 <!-- Appended by scripts/sync-upstream.ts; newest first. -->
 
+### 2026-09-02 — v18.1.1 → v18.1.2
+
+- kept 5732e24e7b feat(ai): enforce Cursor execution policy rejections
+- kept 2f07f83416 fix(ai,coding-agent): normalize gateway model catalog metadata
+- kept c21a787050 chore(dev): preserve fork-local development configuration
+- kept 779b580e15 fix(natives): diagnose and safely promote workspace addons
+- kept 2cced5c93b chore(fork): automate parentless syncs with verified npm natives
+- kept 80fc123ff3 docs(fork): retire macOS 27 Bazel overlay in favor of npm-native syncs
+- kept 857ae4a7da chore(fork): promote automatically once sync verification passes
+- kept 69f1aaf77e chore(dev): pin the shared mnemopi bank for worktree sessions
+- kept e7f351edaf fix(sync): clear stale unregistered worktree directories
+- kept 9ce640c1fe fix(coding-agent): decide non-symlink containment by the parent directory
+- kept eda15ce7a2 docs(solutions): capture macOS hard-link realpath containment learning
+- kept 34e356c545 docs(solutions): record rejection of context-mode plugin for omp
+- kept 663f1ea976 fix(ai): always emit context_length/max_tokens (null fallback) on gateway /v1/models
+- kept 88bf9659ee fix(sync): fall back to bazel-built natives when npm publish lags the upstream tag
+- kept f227776730 refactor(sync): classify fork records by file paths only, drop subject check
+- kept 2ab5a09687 feat(sync): record manual-review acceptances in a durable patch-id ledger
+- kept 6ab6bb8c35 fix(ai): strip uniqueItems from Google/Antigravity tool schemas
+- kept dc9171adf6 feat(sync): require pinned repo-local git identity and add sync-log squash script
+- kept 2cca9dd3a0 chore(fork): consolidate sync log through v18.0.10
+- kept 41575765d9 chore(fork): sync log for v18.0.11
+- kept 21c484c5d5 chore(fork): sync log for v18.1.0
+- kept c288eef41f chore(fork): sync log for v18.1.1
+
 ### 2026-09-01 — v18.1.0 → v18.1.1
 
 - kept df91d39932 feat(ai): enforce Cursor execution policy rejections
