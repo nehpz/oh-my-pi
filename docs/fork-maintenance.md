@@ -98,6 +98,32 @@ For any future local change:
 
 <!-- Appended by scripts/sync-upstream.ts; newest first. -->
 
+### 2026-09-02 — v18.1.2 → v18.1.3
+
+- kept 321e317c1d feat(ai): enforce Cursor execution policy rejections
+- kept 3e6a6d83d7 fix(ai,coding-agent): normalize gateway model catalog metadata
+- kept 454e637ffa chore(dev): preserve fork-local development configuration
+- kept 49fd791a22 fix(natives): diagnose and safely promote workspace addons
+- kept 7474b665fc chore(fork): automate parentless syncs with verified npm natives
+- kept 9ac62c8dc3 docs(fork): retire macOS 27 Bazel overlay in favor of npm-native syncs
+- kept 9471c7ca9b chore(fork): promote automatically once sync verification passes
+- kept b0e1cec476 chore(dev): pin the shared mnemopi bank for worktree sessions
+- kept 2c86e742b7 fix(sync): clear stale unregistered worktree directories
+- kept 44460c87aa fix(coding-agent): decide non-symlink containment by the parent directory
+- kept 5abacdd2dd docs(solutions): capture macOS hard-link realpath containment learning
+- kept a70dc65ba7 docs(solutions): record rejection of context-mode plugin for omp
+- kept f73463661d fix(ai): always emit context_length/max_tokens (null fallback) on gateway /v1/models
+- kept 21165fd561 fix(sync): fall back to bazel-built natives when npm publish lags the upstream tag
+- kept 5d85ca1b0b refactor(sync): classify fork records by file paths only, drop subject check
+- kept 98d1c9a4e6 feat(sync): record manual-review acceptances in a durable patch-id ledger
+- kept 1b1dc6ea59 fix(ai): strip uniqueItems from Google/Antigravity tool schemas
+- kept 1b26f79898 feat(sync): require pinned repo-local git identity and add sync-log squash script
+- kept 7a5b73003a chore(fork): consolidate sync log through v18.0.10
+- kept 6ff57b0ccb chore(fork): sync log for v18.0.11
+- kept 18ab3b00b0 chore(fork): sync log for v18.1.0
+- kept 2f0ee69402 chore(fork): sync log for v18.1.1
+- kept 19caf91f62 chore(fork): sync log for v18.1.2
+
 ### 2026-09-02 — v18.1.1 → v18.1.2
 
 - kept 5732e24e7b feat(ai): enforce Cursor execution policy rejections
