@@ -156,6 +156,17 @@ describe("validateAcquiredNativePackage", () => {
 			expect(() => validateAcquiredNativePackage(invalid)).toThrow(/metadata mismatch|unexpected or missing/);
 		}
 	});
+
+	it("accepts a leaf whose core meta package is not published yet, still checking leaf identity", () => {
+		expect(() => validateAcquiredNativePackage({ ...valid, coreManifest: undefined })).not.toThrow();
+		expect(() =>
+			validateAcquiredNativePackage({
+				...valid,
+				coreManifest: undefined,
+				leafManifest: { ...valid.leafManifest, version: "17.2.3" },
+			}),
+		).toThrow(/metadata mismatch/);
+	});
 });
 
 describe("native addon variant selection", () => {
