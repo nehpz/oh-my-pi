@@ -98,6 +98,34 @@ For any future local change:
 
 <!-- Appended by scripts/sync-upstream.ts; newest first. -->
 
+### 2026-09-03 — v18.1.5 → v18.1.6
+
+- kept 042b83dce0 feat(ai): enforce Cursor execution policy rejections
+- kept bfe1bb667f fix(ai,coding-agent): normalize gateway model catalog metadata
+- kept 11856841b9 chore(dev): preserve fork-local development configuration
+- kept 14aead6516 fix(natives): diagnose and safely promote workspace addons
+- kept cec3439bf8 chore(fork): automate parentless syncs with verified npm natives
+- kept 65424fb8f0 docs(fork): retire macOS 27 Bazel overlay in favor of npm-native syncs
+- kept 91cc0de9ea chore(fork): promote automatically once sync verification passes
+- kept ef538e30d0 chore(dev): pin the shared mnemopi bank for worktree sessions
+- kept 9aff26d9e4 fix(sync): clear stale unregistered worktree directories
+- kept 8fc8af8110 fix(coding-agent): decide non-symlink containment by the parent directory
+- kept c4cc746569 docs(solutions): capture macOS hard-link realpath containment learning
+- kept f389983302 docs(solutions): record rejection of context-mode plugin for omp
+- kept 011d0fc826 fix(ai): always emit context_length/max_tokens (null fallback) on gateway /v1/models
+- kept 121c5e6a51 fix(sync): fall back to bazel-built natives when npm publish lags the upstream tag
+- kept 5f9483423a refactor(sync): classify fork records by file paths only, drop subject check
+- kept 7d724a979e feat(sync): record manual-review acceptances in a durable patch-id ledger
+- kept 82ae2f103c fix(ai): strip uniqueItems from Google/Antigravity tool schemas
+- kept 1b0ec8c3eb feat(sync): require pinned repo-local git identity and add sync-log squash script
+- kept 07b76ccf32 chore(fork): consolidate sync log through v18.0.10
+- kept 6d34924421 chore(fork): sync log for v18.0.11
+- kept 0651cac071 chore(fork): sync log for v18.1.0
+- kept edd30582fa chore(fork): sync log for v18.1.1
+- kept bf4779f0f1 chore(fork): sync log for v18.1.2
+- kept 2b9942540e chore(fork): sync log for v18.1.3
+- kept 311df99531 chore(fork): sync log for v18.1.4
+
 ### 2026-09-02 — v18.1.3 → v18.1.4
 
 - kept 1afee10e36 feat(ai): enforce Cursor execution policy rejections
