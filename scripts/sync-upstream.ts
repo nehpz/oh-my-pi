@@ -849,7 +849,7 @@ export interface NativePackageValidation {
 	tag: string;
 	targetOs: string;
 	targetCpu: string;
-	coreManifest: PackageManifestIdentity;
+	coreManifest: PackageManifestIdentity | undefined;
 	leafManifest: PackageManifestIdentity;
 	addonFiles: readonly string[];
 }
@@ -859,8 +859,8 @@ export function validateAcquiredNativePackage(input: NativePackageValidation): v
 	const exactSingleton = (values: string[] | undefined, expected: string): boolean =>
 		values?.length === 1 && values[0] === expected;
 	if (
-		input.coreManifest.name !== "@oh-my-pi/pi-natives" ||
-		input.coreManifest.version !== input.packageVersion ||
+		(input.coreManifest !== undefined &&
+			(input.coreManifest.name !== "@oh-my-pi/pi-natives" || input.coreManifest.version !== input.packageVersion)) ||
 		input.leafManifest.name !== input.leafName ||
 		input.leafManifest.version !== input.packageVersion ||
 		!exactSingleton(input.leafManifest.os, input.targetOs) ||
@@ -872,6 +872,18 @@ export function validateAcquiredNativePackage(input: NativePackageValidation): v
 	if (input.addonFiles.length === 0 || input.addonFiles.some(file => !expected.includes(file))) {
 		throw new Error(`npm native leaf has unexpected or missing addon files for ${input.tag}`);
 	}
+}
+
+/** Install the acquisition scratch package; `nothrow` keeps the registry error for classification. */
+async function installAcquisitionDeps(installRoot: string, dependencies: Record<string, string>, nothrow = true) {
+	await Bun.write(
+		path.join(installRoot, "package.json"),
+		JSON.stringify({ name: "omp-sync-native-acquisition", private: true, dependencies }),
+	);
+	const install = $`bun install --no-save --no-cache --ignore-scripts --registry=https://registry.npmjs.org`
+		.cwd(installRoot)
+		.quiet();
+	return await (nothrow ? install.nothrow() : install);
 }
 
 export async function acquireNpmNativeAddon(
@@ -887,20 +899,21 @@ export async function acquireNpmNativeAddon(
 	const installRoot = await fs.mkdtemp(path.join(tmpDir, "omp-sync-npm-"));
 	let sourceRoot: string | undefined;
 	try {
-		await Bun.write(
-			path.join(installRoot, "package.json"),
-			JSON.stringify({
-				name: "omp-sync-native-acquisition",
-				private: true,
-				dependencies: { "@oh-my-pi/pi-natives": packageVersion, [leafName]: packageVersion },
-			}),
-		);
-		await $`bun install --no-save --no-cache --ignore-scripts --registry=https://registry.npmjs.org`
-			.cwd(installRoot)
-			.quiet();
-		const coreManifest = JSON.parse(
-			await Bun.file(path.join(installRoot, "node_modules", "@oh-my-pi", "pi-natives", "package.json")).text(),
-		) as PackageManifestIdentity;
+		// Upstream publishes the platform leaves before the core meta package, so
+		// the core can 404 on a fresh tag. The leaf carries the addon; verify core
+		// identity when it is published and fall back to leaf-only when it is not.
+		const leafOnly = { [leafName]: packageVersion };
+		const withCore = { "@oh-my-pi/pi-natives": packageVersion, ...leafOnly };
+		if ((await installAcquisitionDeps(installRoot, withCore)).exitCode !== 0) {
+			await installAcquisitionDeps(installRoot, leafOnly, false);
+		}
+		const corePath = path.join(installRoot, "node_modules", "@oh-my-pi", "pi-natives", "package.json");
+		let coreManifest: PackageManifestIdentity | undefined;
+		try {
+			coreManifest = (await Bun.file(corePath).json()) as PackageManifestIdentity;
+		} catch (err) {
+			if (!isEnoent(err)) throw err;
+		}
 		const leafRoot = path.join(installRoot, "node_modules", leafName);
 		const manifest = JSON.parse(
 			await Bun.file(path.join(leafRoot, "package.json")).text(),
