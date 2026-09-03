@@ -98,6 +98,36 @@ For any future local change:
 
 <!-- Appended by scripts/sync-upstream.ts; newest first. -->
 
+### 2026-09-03 — v18.1.6 → v18.1.8
+
+- kept b743f85a44 feat(ai): enforce Cursor execution policy rejections
+- kept 046a41dd46 fix(ai,coding-agent): normalize gateway model catalog metadata
+- kept 220370857c chore(dev): preserve fork-local development configuration
+- kept 351dfd6dd9 fix(natives): diagnose and safely promote workspace addons
+- kept 407627194b chore(fork): automate parentless syncs with verified npm natives
+- kept 75faa6d4f4 docs(fork): retire macOS 27 Bazel overlay in favor of npm-native syncs
+- kept 4409439198 chore(fork): promote automatically once sync verification passes
+- kept 0ec3c283a3 chore(dev): pin the shared mnemopi bank for worktree sessions
+- kept ad7325948e fix(sync): clear stale unregistered worktree directories
+- kept 8ca3d70d9c fix(coding-agent): decide non-symlink containment by the parent directory
+- kept d8df933cf1 docs(solutions): capture macOS hard-link realpath containment learning
+- kept f18d951d2d docs(solutions): record rejection of context-mode plugin for omp
+- kept 4b7bd6e20d fix(ai): always emit context_length/max_tokens (null fallback) on gateway /v1/models
+- kept 20339adcc7 fix(sync): fall back to bazel-built natives when npm publish lags the upstream tag
+- kept 057f83b260 refactor(sync): classify fork records by file paths only, drop subject check
+- kept e84e67e845 feat(sync): record manual-review acceptances in a durable patch-id ledger
+- kept edcbd828b4 fix(ai): strip uniqueItems from Google/Antigravity tool schemas
+- kept 96a895da11 feat(sync): require pinned repo-local git identity and add sync-log squash script
+- kept 33af4c8410 chore(fork): consolidate sync log through v18.0.10
+- kept 0133780083 chore(fork): sync log for v18.0.11
+- kept ff574cb33b chore(fork): sync log for v18.1.0
+- kept 390390dc09 chore(fork): sync log for v18.1.1
+- kept 3e839111de chore(fork): sync log for v18.1.2
+- kept b972f1f900 chore(fork): sync log for v18.1.3
+- kept b39fde0398 chore(fork): sync log for v18.1.4
+- kept c14084e801 chore(fork): sync log for v18.1.6
+- kept 0d00169f53 fix(sync): accept native leaves when the core meta publish lags
+
 ### 2026-09-03 — v18.1.5 → v18.1.6
 
 - kept 042b83dce0 feat(ai): enforce Cursor execution policy rejections
