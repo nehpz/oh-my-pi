@@ -66,3 +66,17 @@ A selected addon file that lacks the expected Version Sentinel, meaning the bina
 
 ### Process-Stale Addon
 Resident native bindings from an earlier release even though the selected addon file already carries the expected Version Sentinel; restarting the process is the only repair because rebuilding consistent disk state changes nothing in memory.
+
+## Provider Wire Schemas
+
+### Wire Schema
+The provider-facing form of a tool's parameter schema after per-provider sanitization, as opposed to the raw schema a tool or MCP server declares. The raw schema stays authoritative for local validation and transport; the Wire Schema is what a provider actually receives, with keywords that provider cannot accept stripped or transformed.
+
+### Cloud Code Assist
+The Google backend that Gemini CLI and Antigravity requests target. Unlike providers that ignore unknown JSON Schema keywords, it deserializes tool declarations into a fixed protobuf schema and rejects the entire request with a 400 when any declaration carries a field the proto does not define — one unsupported keyword on one tool fails every tool in the request.
+
+### Antigravity
+The Google agent product whose API identity the google-antigravity provider emulates, speaking to Cloud Code Assist with a session and request envelope of its own. In observed behavior, its daily quota counter moves only for requests that reach inference, so requests rejected at payload validation leave the counter untouched — a flat usage reading does not rule out failing requests.
+
+### Description Lift
+The recovery step for stripped human-meaningful constraints (uniqueness, ranges, lengths, patterns): rather than vanishing with the keyword, the constraint is appended to the parameter's description so the model still sees the intent while the Wire Schema stays acceptable to the provider.
