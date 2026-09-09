@@ -3,5 +3,10 @@
     "subject": "fix(sync): fall back to bazel-built natives when npm publish lags the upstream tag",
     "reason": "script-only sync tooling fix; fallback decision logic now covered by tests",
     "date": "2026-08-21"
+  },
+  "3907f1f30b99e11b734d3ce292219eb24dcaf193": {
+    "subject": "fix: resolve Bun executable before setting omp process name",
+    "reason": "accepted via --accept-manual-review",
+    "date": "2026-09-09"
   }
 }
