@@ -40,7 +40,9 @@ cd "$launch_dir"
 # preserve OMP's identity while still running the development CLI through Bun.
 run_bun() {
 	if [ "${HERDR_ENV:-}" = 1 ] && [ "$(uname -s)" = Darwin ]; then
-		exec -a omp bun "$@"
+		# Resolve through runtime-manager shims before changing their dispatch name.
+		bun_executable=$(bun --eval 'process.stdout.write(process.execPath)')
+		exec -a omp "$bun_executable" "$@"
 	fi
 	exec bun "$@"
 }
