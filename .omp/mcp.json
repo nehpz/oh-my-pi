@@ -8,8 +8,10 @@
       }
     }
   },
+  "enabledServers": [
+    "jbcontext"
+  ],
   "disabledServers": [
-    "netdata-cloud",
-    "idea"
+
   ]
 }
