@@ -7,7 +7,7 @@
 # file is committed, every worktree of this repo resolves the same bank.
 #
 # The bank name below is intentionally the pre-existing per-project bank id
-# for /Users/stephen/Projects/nehpz/oh-my-pi, so all previously accumulated
+# for $HOME/Projects/nehpz/oh-my-pi, so all previously accumulated
 # memories stay visible without migration.
 mnemopi:
   scoping: global
