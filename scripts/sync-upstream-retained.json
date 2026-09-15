@@ -8,5 +8,10 @@
     "subject": "fix: resolve Bun executable before setting omp process name",
     "reason": "accepted via --accept-manual-review",
     "date": "2026-09-09"
+  },
+  "57c0fe5d1427dd3ef31d164d02ec89a71acc6394": {
+    "subject": "chore(deps): pin Bun package manager to v1.4.2",
+    "reason": "accepted via --accept-manual-review",
+    "date": "2026-09-15"
   }
 }
