@@ -98,6 +98,727 @@ For any future local change:
 
 <!-- Appended by scripts/sync-upstream.ts; newest first. -->
 
+### 2026-09-15 — v18.1.22 → v18.2.0
+
+- kept e5386105ce feat(ai): enforce Cursor execution policy rejections
+- kept febb5ddad9 fix(ai,coding-agent): normalize gateway model catalog metadata
+- kept a4d00ed99b chore(dev): preserve fork-local development configuration
+- kept b65f0e3e32 fix(natives): diagnose and safely promote workspace addons
+- kept 8358949d91 chore(fork): automate parentless syncs with verified npm natives
+- kept d5ac29dd45 docs(fork): retire macOS 27 Bazel overlay in favor of npm-native syncs
+- kept 499c9a05da chore(fork): promote automatically once sync verification passes
+- kept 7ef28219de chore(dev): pin the shared mnemopi bank for worktree sessions
+- kept 3b22013825 fix(sync): clear stale unregistered worktree directories
+- kept 45b5a5239d fix(coding-agent): decide non-symlink containment by the parent directory
+- kept 6577ca94e0 docs(solutions): capture macOS hard-link realpath containment learning
+- kept c595e586f3 docs(solutions): record rejection of context-mode plugin for omp
+- kept 95104ea3da fix(ai): always emit context_length/max_tokens (null fallback) on gateway /v1/models
+- kept 9a1b3584e5 fix(sync): fall back to bazel-built natives when npm publish lags the upstream tag
+- kept 588d3b372b refactor(sync): classify fork records by file paths only, drop subject check
+- kept 6e822c0e4b feat(sync): record manual-review acceptances in a durable patch-id ledger
+- kept ad55434968 fix(ai): strip uniqueItems from Google/Antigravity tool schemas
+- kept 44c453406c feat(sync): require pinned repo-local git identity and add sync-log squash script
+- kept 9c4a557a63 chore(fork): consolidate sync log through v18.0.10
+- kept 4eb810a368 chore(fork): sync log for v18.0.11
+- kept fe11fbbe7e chore(fork): sync log for v18.1.0
+- kept 182927c583 chore(fork): sync log for v18.1.1
+- kept afc9cd64f7 chore(fork): sync log for v18.1.2
+- kept 69e3d84c48 chore(fork): sync log for v18.1.3
+- kept b176494c92 chore(fork): sync log for v18.1.4
+- kept 75864cd4a3 chore(fork): sync log for v18.1.6
+- kept 04f550bead fix(sync): accept native leaves when the core meta publish lags
+- kept d2ffd38a5c chore(fork): sync log for v18.1.8
+- kept 59d0047a22 docs(ai): document Cloud Code Assist schema rejection workaround
+- kept 95299c6414 chore(fork): sync log for v18.1.10
+- kept f2de9d819b chore(fork): sync log for v18.1.11
+- kept cc4cc72795 chore(fork): sync log for v18.1.13
+- kept 3924d80c64 chore(fork): sync log for v18.1.14
+- kept da12e0bd32 chore(fork): sync log for v18.1.15
+- kept 31623bb943 fix: resolve Bun executable before setting omp process name
+- kept 695d8ec32a chore(fork): record manual-review acceptances
+- kept 8649861bc1 chore(fork): sync log for v18.1.16
+- kept ab7f0a3cab chore(fork): sync log for v18.1.17
+- kept b6e8e1eca5 chore(fork): sync log for v18.1.18
+- kept 0438ad7f23 chore(fork): sync log for v18.1.19
+- kept e6ac2ed312 chore(fork): sync log for v18.1.20
+- kept e7e772f475 chore(config): enable jbcontext MCP server
+- kept db93e6a399 chore(fork): sync log for v18.1.21
+- kept 34d1d36059 chore(fork): sync log for v18.1.22
+- kept a272f5224e chore(deps): pin Bun package manager to v1.4.2
+- kept 039402e8ac chore(fork): record manual-review acceptances
+
+### 2026-09-15 — v18.1.21 → v18.1.22
+
+- kept bc6420e9af feat(ai): enforce Cursor execution policy rejections
+- kept 3091de1825 fix(ai,coding-agent): normalize gateway model catalog metadata
+- kept c5723fa015 chore(dev): preserve fork-local development configuration
+- kept d4d5e4107d fix(natives): diagnose and safely promote workspace addons
+- kept 8a0e957b22 chore(fork): automate parentless syncs with verified npm natives
+- kept b3b6afd59e docs(fork): retire macOS 27 Bazel overlay in favor of npm-native syncs
+- kept cc8b420968 chore(fork): promote automatically once sync verification passes
+- kept 4b7b9486dc chore(dev): pin the shared mnemopi bank for worktree sessions
+- kept 04f339bb0d fix(sync): clear stale unregistered worktree directories
+- kept 178bf6e390 fix(coding-agent): decide non-symlink containment by the parent directory
+- kept 094d7075a0 docs(solutions): capture macOS hard-link realpath containment learning
+- kept b1ce1ca6c2 docs(solutions): record rejection of context-mode plugin for omp
+- kept 7b85c8d986 fix(ai): always emit context_length/max_tokens (null fallback) on gateway /v1/models
+- kept 2c9b098970 fix(sync): fall back to bazel-built natives when npm publish lags the upstream tag
+- kept 4d455946e8 refactor(sync): classify fork records by file paths only, drop subject check
+- kept 33784b2f1d feat(sync): record manual-review acceptances in a durable patch-id ledger
+- kept bbadf2bb48 fix(ai): strip uniqueItems from Google/Antigravity tool schemas
+- kept 4966516272 feat(sync): require pinned repo-local git identity and add sync-log squash script
+- kept 5012fb501c chore(fork): consolidate sync log through v18.0.10
+- kept ede24f223c chore(fork): sync log for v18.0.11
+- kept f1880cc544 chore(fork): sync log for v18.1.0
+- kept d0c75c79be chore(fork): sync log for v18.1.1
+- kept 9e543b84dc chore(fork): sync log for v18.1.2
+- kept c83c13ffb0 chore(fork): sync log for v18.1.3
+- kept 8c5d6fbdb5 chore(fork): sync log for v18.1.4
+- kept 7848edb557 chore(fork): sync log for v18.1.6
+- kept 0d174e6631 fix(sync): accept native leaves when the core meta publish lags
+- kept 212b45418a chore(fork): sync log for v18.1.8
+- kept ed751fae57 docs(ai): document Cloud Code Assist schema rejection workaround
+- kept 0eff73244f chore(fork): sync log for v18.1.10
+- kept 827d1e0570 chore(fork): sync log for v18.1.11
+- kept 39e3fbd951 chore(fork): sync log for v18.1.13
+- kept 0eb0ae35f6 chore(fork): sync log for v18.1.14
+- kept 1277ffb817 chore(fork): sync log for v18.1.15
+- kept 724efa86ca fix: resolve Bun executable before setting omp process name
+- kept 41bf917b38 chore(fork): record manual-review acceptances
+- kept a74761d481 chore(fork): sync log for v18.1.16
+- kept 29a98b2ee0 chore(fork): sync log for v18.1.17
+- kept 807bf50ad9 chore(fork): sync log for v18.1.18
+- kept 2d76837172 chore(fork): sync log for v18.1.19
+- kept 44dc179eeb chore(fork): sync log for v18.1.20
+- kept 5b5599bffd chore(config): enable jbcontext MCP server
+- kept ea28287ee9 chore(fork): sync log for v18.1.21
+
+### 2026-09-14 — v18.1.20 → v18.1.21
+
+- kept c6b0cbdfc9 feat(ai): enforce Cursor execution policy rejections
+- kept bd7c0baa26 fix(ai,coding-agent): normalize gateway model catalog metadata
+- kept 5025436df6 chore(dev): preserve fork-local development configuration
+- kept 1dc9aad978 fix(natives): diagnose and safely promote workspace addons
+- kept 5208feee6f chore(fork): automate parentless syncs with verified npm natives
+- kept 5c4498cbd1 docs(fork): retire macOS 27 Bazel overlay in favor of npm-native syncs
+- kept eb10b457b1 chore(fork): promote automatically once sync verification passes
+- kept fa6208f540 chore(dev): pin the shared mnemopi bank for worktree sessions
+- kept f8af51f2ef fix(sync): clear stale unregistered worktree directories
+- kept 41e41eccb3 fix(coding-agent): decide non-symlink containment by the parent directory
+- kept 9a36eba3e3 docs(solutions): capture macOS hard-link realpath containment learning
+- kept 71981db56f docs(solutions): record rejection of context-mode plugin for omp
+- kept 00c54a440d fix(ai): always emit context_length/max_tokens (null fallback) on gateway /v1/models
+- kept 5ae6c1df7a fix(sync): fall back to bazel-built natives when npm publish lags the upstream tag
+- kept 8ac5599dfc refactor(sync): classify fork records by file paths only, drop subject check
+- kept cab1399da6 feat(sync): record manual-review acceptances in a durable patch-id ledger
+- kept 4f0cf69ac7 fix(ai): strip uniqueItems from Google/Antigravity tool schemas
+- kept e0d91debb6 feat(sync): require pinned repo-local git identity and add sync-log squash script
+- kept 4d86b3e036 chore(fork): consolidate sync log through v18.0.10
+- kept 9fcdfa1324 chore(fork): sync log for v18.0.11
+- kept 35b635f0de chore(fork): sync log for v18.1.0
+- kept 1dd64b011b chore(fork): sync log for v18.1.1
+- kept b334047acc chore(fork): sync log for v18.1.2
+- kept 54feff3c17 chore(fork): sync log for v18.1.3
+- kept c2fa27e98b chore(fork): sync log for v18.1.4
+- kept de4409dc77 chore(fork): sync log for v18.1.6
+- kept 6180bebcee fix(sync): accept native leaves when the core meta publish lags
+- kept fb635c7490 chore(fork): sync log for v18.1.8
+- kept 4792ccab01 docs(ai): document Cloud Code Assist schema rejection workaround
+- kept fe838f1116 chore(fork): sync log for v18.1.10
+- kept 8b0619b3ee chore(fork): sync log for v18.1.11
+- kept 5b7470540d chore(fork): sync log for v18.1.13
+- kept d9bce8efd5 chore(fork): sync log for v18.1.14
+- kept 34f55ddb05 chore(fork): sync log for v18.1.15
+- kept 8096038177 fix: resolve Bun executable before setting omp process name
+- kept cf96009317 chore(fork): record manual-review acceptances
+- kept 7535232d23 chore(fork): sync log for v18.1.16
+- kept 88c786d173 chore(fork): sync log for v18.1.17
+- kept f64a3de057 chore(fork): sync log for v18.1.18
+- kept 7961436733 chore(fork): sync log for v18.1.19
+- kept b4d80e9b4c chore(fork): sync log for v18.1.20
+- kept 62219e1de0 chore(config): enable jbcontext MCP server
+
+### 2026-09-13 — v18.1.19 → v18.1.20
+
+- kept 6ce6bc5fdf feat(ai): enforce Cursor execution policy rejections
+- kept 50abed0dad fix(ai,coding-agent): normalize gateway model catalog metadata
+- kept c04f9f6e7e chore(dev): preserve fork-local development configuration
+- kept 2ed2e915ae fix(natives): diagnose and safely promote workspace addons
+- kept 01ce4e36ab chore(fork): automate parentless syncs with verified npm natives
+- kept 60055ae010 docs(fork): retire macOS 27 Bazel overlay in favor of npm-native syncs
+- kept 25d95d5694 chore(fork): promote automatically once sync verification passes
+- kept 23479cfa7d chore(dev): pin the shared mnemopi bank for worktree sessions
+- kept 6a4f777e7e fix(sync): clear stale unregistered worktree directories
+- kept b190f5aa83 fix(coding-agent): decide non-symlink containment by the parent directory
+- kept ab691e372c docs(solutions): capture macOS hard-link realpath containment learning
+- kept 2d63eb75d6 docs(solutions): record rejection of context-mode plugin for omp
+- kept 4bee727b8f fix(ai): always emit context_length/max_tokens (null fallback) on gateway /v1/models
+- kept 9d086b23b8 fix(sync): fall back to bazel-built natives when npm publish lags the upstream tag
+- kept 0b3990ffc9 refactor(sync): classify fork records by file paths only, drop subject check
+- kept e7c5e13b6a feat(sync): record manual-review acceptances in a durable patch-id ledger
+- kept e7e9b09f8c fix(ai): strip uniqueItems from Google/Antigravity tool schemas
+- kept ab0de78953 feat(sync): require pinned repo-local git identity and add sync-log squash script
+- kept 6617805509 chore(fork): consolidate sync log through v18.0.10
+- kept 03756f2790 chore(fork): sync log for v18.0.11
+- kept 48572c10db chore(fork): sync log for v18.1.0
+- kept 3d08c91b71 chore(fork): sync log for v18.1.1
+- kept 6dcf084e07 chore(fork): sync log for v18.1.2
+- kept f202ef30c1 chore(fork): sync log for v18.1.3
+- kept 212dc9b2f6 chore(fork): sync log for v18.1.4
+- kept b9165ca197 chore(fork): sync log for v18.1.6
+- kept 5f5f8a52b8 fix(sync): accept native leaves when the core meta publish lags
+- kept 60d0d59233 chore(fork): sync log for v18.1.8
+- kept b30f3d8381 docs(ai): document Cloud Code Assist schema rejection workaround
+- kept 0a41dc49cc chore(fork): sync log for v18.1.10
+- kept 8b7521d5c5 chore(fork): sync log for v18.1.11
+- kept 3bc9ee2476 chore(fork): sync log for v18.1.13
+- kept 8692bdff52 chore(fork): sync log for v18.1.14
+- kept 27a971be61 chore(fork): sync log for v18.1.15
+- kept 65a8b675e5 fix: resolve Bun executable before setting omp process name
+- kept 9725d61163 chore(fork): record manual-review acceptances
+- kept 97c506c1f5 chore(fork): sync log for v18.1.16
+- kept 15e630c589 chore(fork): sync log for v18.1.17
+- kept 4449cb391b chore(fork): sync log for v18.1.18
+- kept 5796972abd chore(fork): sync log for v18.1.19
+
+### 2026-09-13 — v18.1.18 → v18.1.19
+
+- kept b10b4152e8 feat(ai): enforce Cursor execution policy rejections
+- kept da56fa0b9e fix(ai,coding-agent): normalize gateway model catalog metadata
+- kept 14b3cbe3ee chore(dev): preserve fork-local development configuration
+- kept 7fb5709f6b fix(natives): diagnose and safely promote workspace addons
+- kept 6235876a68 chore(fork): automate parentless syncs with verified npm natives
+- kept 0f7a462b86 docs(fork): retire macOS 27 Bazel overlay in favor of npm-native syncs
+- kept 50144f68b9 chore(fork): promote automatically once sync verification passes
+- kept df1b698d93 chore(dev): pin the shared mnemopi bank for worktree sessions
+- kept 7ba852fe81 fix(sync): clear stale unregistered worktree directories
+- kept d1bf6f322f fix(coding-agent): decide non-symlink containment by the parent directory
+- kept 1fe13b3dc9 docs(solutions): capture macOS hard-link realpath containment learning
+- kept 47846b27d5 docs(solutions): record rejection of context-mode plugin for omp
+- kept 30ed00b18b fix(ai): always emit context_length/max_tokens (null fallback) on gateway /v1/models
+- kept 43be86d4a4 fix(sync): fall back to bazel-built natives when npm publish lags the upstream tag
+- kept bb7e14476d refactor(sync): classify fork records by file paths only, drop subject check
+- kept fa94549642 feat(sync): record manual-review acceptances in a durable patch-id ledger
+- kept 104d1bec0a fix(ai): strip uniqueItems from Google/Antigravity tool schemas
+- kept 8b5448f52f feat(sync): require pinned repo-local git identity and add sync-log squash script
+- kept 34cf514492 chore(fork): consolidate sync log through v18.0.10
+- kept 699c76f97f chore(fork): sync log for v18.0.11
+- kept 14e3b3d305 chore(fork): sync log for v18.1.0
+- kept 8df339185e chore(fork): sync log for v18.1.1
+- kept 99102b4589 chore(fork): sync log for v18.1.2
+- kept defe31270b chore(fork): sync log for v18.1.3
+- kept 42935aff49 chore(fork): sync log for v18.1.4
+- kept f050fa3620 chore(fork): sync log for v18.1.6
+- kept 7051881dd6 fix(sync): accept native leaves when the core meta publish lags
+- kept e11d9bb8ca chore(fork): sync log for v18.1.8
+- kept 514eb905fe docs(ai): document Cloud Code Assist schema rejection workaround
+- kept 15920ceb4d chore(fork): sync log for v18.1.10
+- kept a42961920a chore(fork): sync log for v18.1.11
+- kept e9ab3351fb chore(fork): sync log for v18.1.13
+- kept 0af42a4b64 chore(fork): sync log for v18.1.14
+- kept eedef82ac3 chore(fork): sync log for v18.1.15
+- kept ba91cf853e fix: resolve Bun executable before setting omp process name
+- kept 5e834b57e0 chore(fork): record manual-review acceptances
+- kept eae61331ea chore(fork): sync log for v18.1.16
+- kept e368608e8b chore(fork): sync log for v18.1.17
+- kept e912116704 chore(fork): sync log for v18.1.18
+
+### 2026-09-12 — v18.1.17 → v18.1.18
+
+- kept 4834b94a2c feat(ai): enforce Cursor execution policy rejections
+- kept 361807570d fix(ai,coding-agent): normalize gateway model catalog metadata
+- kept 606640c96b chore(dev): preserve fork-local development configuration
+- kept dc2b1f74b9 fix(natives): diagnose and safely promote workspace addons
+- kept fa80d3d334 chore(fork): automate parentless syncs with verified npm natives
+- kept 047bc36f63 docs(fork): retire macOS 27 Bazel overlay in favor of npm-native syncs
+- kept 566d51023a chore(fork): promote automatically once sync verification passes
+- kept 1f233e5bc4 chore(dev): pin the shared mnemopi bank for worktree sessions
+- kept 7f8ebc4962 fix(sync): clear stale unregistered worktree directories
+- kept dd2788f782 fix(coding-agent): decide non-symlink containment by the parent directory
+- kept c29805a42f docs(solutions): capture macOS hard-link realpath containment learning
+- kept ba280e578f docs(solutions): record rejection of context-mode plugin for omp
+- kept a38a9693b5 fix(ai): always emit context_length/max_tokens (null fallback) on gateway /v1/models
+- kept 913d6e9f71 fix(sync): fall back to bazel-built natives when npm publish lags the upstream tag
+- kept 8f0824e1c2 refactor(sync): classify fork records by file paths only, drop subject check
+- kept f8e29fbe3e feat(sync): record manual-review acceptances in a durable patch-id ledger
+- kept 0ae34f6b66 fix(ai): strip uniqueItems from Google/Antigravity tool schemas
+- kept b02f03bd91 feat(sync): require pinned repo-local git identity and add sync-log squash script
+- kept 04981193f4 chore(fork): consolidate sync log through v18.0.10
+- kept 92dc0f6f5f chore(fork): sync log for v18.0.11
+- kept fd577d2cea chore(fork): sync log for v18.1.0
+- kept 46f2642a3c chore(fork): sync log for v18.1.1
+- kept 3dc38e4c22 chore(fork): sync log for v18.1.2
+- kept e2c9517c05 chore(fork): sync log for v18.1.3
+- kept 62f93458b4 chore(fork): sync log for v18.1.4
+- kept 2ab4792663 chore(fork): sync log for v18.1.6
+- kept 09e20bd91a fix(sync): accept native leaves when the core meta publish lags
+- kept ebac4b49c1 chore(fork): sync log for v18.1.8
+- kept f2757dc11e docs(ai): document Cloud Code Assist schema rejection workaround
+- kept a94d7232a1 chore(fork): sync log for v18.1.10
+- kept 799afc772f chore(fork): sync log for v18.1.11
+- kept a41c360235 chore(fork): sync log for v18.1.13
+- kept 41a4541f83 chore(fork): sync log for v18.1.14
+- kept e81a779bd8 chore(fork): sync log for v18.1.15
+- kept 9b20cc6f1f fix: resolve Bun executable before setting omp process name
+- kept 2479d7a87d chore(fork): record manual-review acceptances
+- kept aba5971e59 chore(fork): sync log for v18.1.16
+- kept ede533f9d0 chore(fork): sync log for v18.1.17
+
+### 2026-09-10 — v18.1.16 → v18.1.17
+
+- kept 4d182d610a feat(ai): enforce Cursor execution policy rejections
+- kept fe886d5da4 fix(ai,coding-agent): normalize gateway model catalog metadata
+- kept 145ce4eed9 chore(dev): preserve fork-local development configuration
+- kept a41b457cb8 fix(natives): diagnose and safely promote workspace addons
+- kept 1a2d8eb83c chore(fork): automate parentless syncs with verified npm natives
+- kept c43bb44c94 docs(fork): retire macOS 27 Bazel overlay in favor of npm-native syncs
+- kept 04306f3195 chore(fork): promote automatically once sync verification passes
+- kept 17ed0070c0 chore(dev): pin the shared mnemopi bank for worktree sessions
+- kept 3a9160fbad fix(sync): clear stale unregistered worktree directories
+- kept d04feece28 fix(coding-agent): decide non-symlink containment by the parent directory
+- kept 1e2d2b7991 docs(solutions): capture macOS hard-link realpath containment learning
+- kept ba4b0bce3f docs(solutions): record rejection of context-mode plugin for omp
+- kept fa90c2a133 fix(ai): always emit context_length/max_tokens (null fallback) on gateway /v1/models
+- kept 85bc238fbc fix(sync): fall back to bazel-built natives when npm publish lags the upstream tag
+- kept 2663732f67 refactor(sync): classify fork records by file paths only, drop subject check
+- kept fdf78a26db feat(sync): record manual-review acceptances in a durable patch-id ledger
+- kept b1ec38afe8 fix(ai): strip uniqueItems from Google/Antigravity tool schemas
+- kept 4d3068b9ea feat(sync): require pinned repo-local git identity and add sync-log squash script
+- kept 1d68a72c56 chore(fork): consolidate sync log through v18.0.10
+- kept 5853dde631 chore(fork): sync log for v18.0.11
+- kept bab563546d chore(fork): sync log for v18.1.0
+- kept fbeeed5e76 chore(fork): sync log for v18.1.1
+- kept 5b4bb21ddd chore(fork): sync log for v18.1.2
+- kept 8dce27f057 chore(fork): sync log for v18.1.3
+- kept 4df8c97d60 chore(fork): sync log for v18.1.4
+- kept aee006c792 chore(fork): sync log for v18.1.6
+- kept 3eea01c8ba fix(sync): accept native leaves when the core meta publish lags
+- kept 4f56bdc61f chore(fork): sync log for v18.1.8
+- kept 6c3afbf1ae docs(ai): document Cloud Code Assist schema rejection workaround
+- kept 009c1e5cd4 chore(fork): sync log for v18.1.10
+- kept d8204e8964 chore(fork): sync log for v18.1.11
+- kept 460d3e2409 chore(fork): sync log for v18.1.13
+- kept 60bbef85d0 chore(fork): sync log for v18.1.14
+- kept e29d13b5cd chore(fork): sync log for v18.1.15
+- kept 301d1be5b6 fix: resolve Bun executable before setting omp process name
+- kept 88f9418723 chore(fork): record manual-review acceptances
+- kept cff5c5bb00 chore(fork): sync log for v18.1.16
+
+### 2026-09-09 — v18.1.15 → v18.1.16
+
+- kept 7b5794502f feat(ai): enforce Cursor execution policy rejections
+- kept 93ee29c1fb fix(ai,coding-agent): normalize gateway model catalog metadata
+- kept 61730a6f4a chore(dev): preserve fork-local development configuration
+- kept b2dc9e5226 fix(natives): diagnose and safely promote workspace addons
+- kept 4e34019e15 chore(fork): automate parentless syncs with verified npm natives
+- kept d1f87b1f0f docs(fork): retire macOS 27 Bazel overlay in favor of npm-native syncs
+- kept acfc6c86f1 chore(fork): promote automatically once sync verification passes
+- kept 03ec6a67e0 chore(dev): pin the shared mnemopi bank for worktree sessions
+- kept ada67072dd fix(sync): clear stale unregistered worktree directories
+- kept 5443cf7879 fix(coding-agent): decide non-symlink containment by the parent directory
+- kept 6184770661 docs(solutions): capture macOS hard-link realpath containment learning
+- kept 020df22bf6 docs(solutions): record rejection of context-mode plugin for omp
+- kept 512e192f9f fix(ai): always emit context_length/max_tokens (null fallback) on gateway /v1/models
+- kept b0ac524090 fix(sync): fall back to bazel-built natives when npm publish lags the upstream tag
+- kept 002ba3ec22 refactor(sync): classify fork records by file paths only, drop subject check
+- kept efd8ea4fd5 feat(sync): record manual-review acceptances in a durable patch-id ledger
+- kept 2b09d6b4c8 fix(ai): strip uniqueItems from Google/Antigravity tool schemas
+- kept e90c4f1f09 feat(sync): require pinned repo-local git identity and add sync-log squash script
+- kept 4efe11a536 chore(fork): consolidate sync log through v18.0.10
+- kept 3b8ab2b445 chore(fork): sync log for v18.0.11
+- kept f0a3302f88 chore(fork): sync log for v18.1.0
+- kept 8dcfeb108c chore(fork): sync log for v18.1.1
+- kept 35d379de2e chore(fork): sync log for v18.1.2
+- kept 26b115c6dd chore(fork): sync log for v18.1.3
+- kept 7b73e6542b chore(fork): sync log for v18.1.4
+- kept 2194e5cb48 chore(fork): sync log for v18.1.6
+- kept 4e00fd2e93 fix(sync): accept native leaves when the core meta publish lags
+- kept c587ebb271 chore(fork): sync log for v18.1.8
+- kept f4b844686c docs(ai): document Cloud Code Assist schema rejection workaround
+- kept ca256f6301 chore(fork): sync log for v18.1.10
+- kept 6fa4984d78 chore(fork): sync log for v18.1.11
+- kept 3d78310f3d chore(fork): sync log for v18.1.13
+- kept bfeedd4077 chore(fork): sync log for v18.1.14
+- kept 9f496154df chore(fork): sync log for v18.1.15
+- kept ba0493fb50 fix: resolve Bun executable before setting omp process name
+- kept 1ef2aeba8a chore(fork): record manual-review acceptances
+- note: ba0493fb50 fix: resolve Bun executable before setting omp process name (no owned tests — manual review; patch-id 3907f1f30b99e11b734d3ce292219eb24dcaf193)
+
+### 2026-09-09 — v18.1.14 → v18.1.15
+
+- kept 062759fb3b feat(ai): enforce Cursor execution policy rejections
+- kept 7a9d746032 fix(ai,coding-agent): normalize gateway model catalog metadata
+- kept 284f78e529 chore(dev): preserve fork-local development configuration
+- kept 756857ee22 fix(natives): diagnose and safely promote workspace addons
+- kept 270af33742 chore(fork): automate parentless syncs with verified npm natives
+- kept 553cfea476 docs(fork): retire macOS 27 Bazel overlay in favor of npm-native syncs
+- kept 24319c4ef3 chore(fork): promote automatically once sync verification passes
+- kept 7505d553c7 chore(dev): pin the shared mnemopi bank for worktree sessions
+- kept b85acd73d2 fix(sync): clear stale unregistered worktree directories
+- kept 7d1df022f2 fix(coding-agent): decide non-symlink containment by the parent directory
+- kept 68ae098dee docs(solutions): capture macOS hard-link realpath containment learning
+- kept 7b4adf0205 docs(solutions): record rejection of context-mode plugin for omp
+- kept 4019c7725c fix(ai): always emit context_length/max_tokens (null fallback) on gateway /v1/models
+- kept 26a7a2fe94 fix(sync): fall back to bazel-built natives when npm publish lags the upstream tag
+- kept e8846f9e6d refactor(sync): classify fork records by file paths only, drop subject check
+- kept aad42ce62b feat(sync): record manual-review acceptances in a durable patch-id ledger
+- kept 36e51e0c8a fix(ai): strip uniqueItems from Google/Antigravity tool schemas
+- kept e12b940720 feat(sync): require pinned repo-local git identity and add sync-log squash script
+- kept 7438cb834b chore(fork): consolidate sync log through v18.0.10
+- kept 99a79f8a75 chore(fork): sync log for v18.0.11
+- kept 01690fc298 chore(fork): sync log for v18.1.0
+- kept d5b561fbf8 chore(fork): sync log for v18.1.1
+- kept 6b398e2e83 chore(fork): sync log for v18.1.2
+- kept 6ae250ae6e chore(fork): sync log for v18.1.3
+- kept 7ce6a13a2e chore(fork): sync log for v18.1.4
+- kept ee72b6cbb8 chore(fork): sync log for v18.1.6
+- kept 8d37d054cc fix(sync): accept native leaves when the core meta publish lags
+- kept 48f633a217 chore(fork): sync log for v18.1.8
+- kept d246ad1fe6 docs(ai): document Cloud Code Assist schema rejection workaround
+- kept bdbb19dbea chore(fork): sync log for v18.1.10
+- kept 9571855a91 chore(fork): sync log for v18.1.11
+- kept 4ca1267c3e chore(fork): sync log for v18.1.13
+- kept 20c0337dd3 chore(fork): sync log for v18.1.14
+
+### 2026-09-08 — v18.1.13 → v18.1.14
+
+- kept 98373d2881 feat(ai): enforce Cursor execution policy rejections
+- kept 0498615b21 fix(ai,coding-agent): normalize gateway model catalog metadata
+- kept 39de24bdf5 chore(dev): preserve fork-local development configuration
+- kept bbaf464f5d fix(natives): diagnose and safely promote workspace addons
+- kept 885be00416 chore(fork): automate parentless syncs with verified npm natives
+- kept 2442e9180e docs(fork): retire macOS 27 Bazel overlay in favor of npm-native syncs
+- kept a061d90efc chore(fork): promote automatically once sync verification passes
+- kept 38f7d7de3c chore(dev): pin the shared mnemopi bank for worktree sessions
+- kept 5a6b96ee1b fix(sync): clear stale unregistered worktree directories
+- kept ba456d0e84 fix(coding-agent): decide non-symlink containment by the parent directory
+- kept 9fc4fd9ccb docs(solutions): capture macOS hard-link realpath containment learning
+- kept f7e3b46d48 docs(solutions): record rejection of context-mode plugin for omp
+- kept f70989fe93 fix(ai): always emit context_length/max_tokens (null fallback) on gateway /v1/models
+- kept 8be9fdb830 fix(sync): fall back to bazel-built natives when npm publish lags the upstream tag
+- kept e7e2b31f9b refactor(sync): classify fork records by file paths only, drop subject check
+- kept a3f27bdd86 feat(sync): record manual-review acceptances in a durable patch-id ledger
+- kept 21826f6bb4 fix(ai): strip uniqueItems from Google/Antigravity tool schemas
+- kept c1e2ad3998 feat(sync): require pinned repo-local git identity and add sync-log squash script
+- kept 8c2e419e60 chore(fork): consolidate sync log through v18.0.10
+- kept 12724d5b7a chore(fork): sync log for v18.0.11
+- kept d4bcbb628b chore(fork): sync log for v18.1.0
+- kept eb9f0235ed chore(fork): sync log for v18.1.1
+- kept 1023da7b3a chore(fork): sync log for v18.1.2
+- kept 47da37aff3 chore(fork): sync log for v18.1.3
+- kept ff02ea35c4 chore(fork): sync log for v18.1.4
+- kept 50f558d91e chore(fork): sync log for v18.1.6
+- kept 9618115271 fix(sync): accept native leaves when the core meta publish lags
+- kept c100d4d233 chore(fork): sync log for v18.1.8
+- kept 86cd8f2a00 docs(ai): document Cloud Code Assist schema rejection workaround
+- kept 36366590ce chore(fork): sync log for v18.1.10
+- kept 9c5ed45391 chore(fork): sync log for v18.1.11
+- kept ce2e556cbd chore(fork): sync log for v18.1.13
+
+### 2026-09-07 — v18.1.11 → v18.1.13
+
+- kept 82c8d7f36a feat(ai): enforce Cursor execution policy rejections
+- kept 16dcae0d1a fix(ai,coding-agent): normalize gateway model catalog metadata
+- kept ac9f406077 chore(dev): preserve fork-local development configuration
+- kept 5b0808469c fix(natives): diagnose and safely promote workspace addons
+- kept b6c8d986fa chore(fork): automate parentless syncs with verified npm natives
+- kept 777b7d3c61 docs(fork): retire macOS 27 Bazel overlay in favor of npm-native syncs
+- kept ae81ebdd38 chore(fork): promote automatically once sync verification passes
+- kept 5accfe00f2 chore(dev): pin the shared mnemopi bank for worktree sessions
+- kept b1b8124c9a fix(sync): clear stale unregistered worktree directories
+- kept f2804d2328 fix(coding-agent): decide non-symlink containment by the parent directory
+- kept f22539890b docs(solutions): capture macOS hard-link realpath containment learning
+- kept b044139302 docs(solutions): record rejection of context-mode plugin for omp
+- kept 072c712a1a fix(ai): always emit context_length/max_tokens (null fallback) on gateway /v1/models
+- kept aa46d16366 fix(sync): fall back to bazel-built natives when npm publish lags the upstream tag
+- kept 49ba4ee0a0 refactor(sync): classify fork records by file paths only, drop subject check
+- kept bde3cd3aaf feat(sync): record manual-review acceptances in a durable patch-id ledger
+- kept 9a0e0842c8 fix(ai): strip uniqueItems from Google/Antigravity tool schemas
+- kept d1a7ac6e87 feat(sync): require pinned repo-local git identity and add sync-log squash script
+- kept bb2f0defcd chore(fork): consolidate sync log through v18.0.10
+- kept c3b85636db chore(fork): sync log for v18.0.11
+- kept 047392f55b chore(fork): sync log for v18.1.0
+- kept a5e2871088 chore(fork): sync log for v18.1.1
+- kept 4b94601f2d chore(fork): sync log for v18.1.2
+- kept 7941d2e1b2 chore(fork): sync log for v18.1.3
+- kept 1c6df96bb0 chore(fork): sync log for v18.1.4
+- kept 9c2744dbf7 chore(fork): sync log for v18.1.6
+- kept 96db6f160e fix(sync): accept native leaves when the core meta publish lags
+- kept 020ef07ae3 chore(fork): sync log for v18.1.8
+- kept 82ab199a40 docs(ai): document Cloud Code Assist schema rejection workaround
+- kept e87f792460 chore(fork): sync log for v18.1.10
+- kept 5e6ff4ff88 chore(fork): sync log for v18.1.11
+
+### 2026-09-05 — v18.1.10 → v18.1.11
+
+- kept 26c4a035f6 feat(ai): enforce Cursor execution policy rejections
+- kept aa31618be4 fix(ai,coding-agent): normalize gateway model catalog metadata
+- kept 8cfb0cc435 chore(dev): preserve fork-local development configuration
+- kept e5c807ec27 fix(natives): diagnose and safely promote workspace addons
+- kept f7b25177e9 chore(fork): automate parentless syncs with verified npm natives
+- kept b35a07c01d docs(fork): retire macOS 27 Bazel overlay in favor of npm-native syncs
+- kept 00b99a6ef7 chore(fork): promote automatically once sync verification passes
+- kept 37ea2e1228 chore(dev): pin the shared mnemopi bank for worktree sessions
+- kept 9522848a37 fix(sync): clear stale unregistered worktree directories
+- kept 64b6b8cf6c fix(coding-agent): decide non-symlink containment by the parent directory
+- kept 4fe407d9cd docs(solutions): capture macOS hard-link realpath containment learning
+- kept be58cba1fc docs(solutions): record rejection of context-mode plugin for omp
+- kept 1328a9d492 fix(ai): always emit context_length/max_tokens (null fallback) on gateway /v1/models
+- kept d43f74db07 fix(sync): fall back to bazel-built natives when npm publish lags the upstream tag
+- kept 17e94df0dd refactor(sync): classify fork records by file paths only, drop subject check
+- kept 2e1d4e4341 feat(sync): record manual-review acceptances in a durable patch-id ledger
+- kept 4d6db1b531 fix(ai): strip uniqueItems from Google/Antigravity tool schemas
+- kept 8ae4184fee feat(sync): require pinned repo-local git identity and add sync-log squash script
+- kept 209673d0f5 chore(fork): consolidate sync log through v18.0.10
+- kept bf1fe22ea6 chore(fork): sync log for v18.0.11
+- kept 077d4219a5 chore(fork): sync log for v18.1.0
+- kept cbd5dbab13 chore(fork): sync log for v18.1.1
+- kept ecbb1e10db chore(fork): sync log for v18.1.2
+- kept 9228a8ae63 chore(fork): sync log for v18.1.3
+- kept cd2eaded3f chore(fork): sync log for v18.1.4
+- kept 242c32862a chore(fork): sync log for v18.1.6
+- kept 02373cde3b fix(sync): accept native leaves when the core meta publish lags
+- kept e0c50a785a chore(fork): sync log for v18.1.8
+- kept 417dd7c5a1 docs(ai): document Cloud Code Assist schema rejection workaround
+- kept 9fac35a765 chore(fork): sync log for v18.1.10
+
+### 2026-09-04 — v18.1.8 → v18.1.10
+
+- kept 8618c74a25 feat(ai): enforce Cursor execution policy rejections
+- kept 3ba089b0b2 fix(ai,coding-agent): normalize gateway model catalog metadata
+- kept c09b0925a1 chore(dev): preserve fork-local development configuration
+- kept 21c6a72648 fix(natives): diagnose and safely promote workspace addons
+- kept ef0ab331d7 chore(fork): automate parentless syncs with verified npm natives
+- kept 9742319260 docs(fork): retire macOS 27 Bazel overlay in favor of npm-native syncs
+- kept 27d45b9f66 chore(fork): promote automatically once sync verification passes
+- kept 1b5f876c05 chore(dev): pin the shared mnemopi bank for worktree sessions
+- kept 6ce7140638 fix(sync): clear stale unregistered worktree directories
+- kept 4dd10c113b fix(coding-agent): decide non-symlink containment by the parent directory
+- kept 791d6435ab docs(solutions): capture macOS hard-link realpath containment learning
+- kept 5badebc84f docs(solutions): record rejection of context-mode plugin for omp
+- kept d69b1df36a fix(ai): always emit context_length/max_tokens (null fallback) on gateway /v1/models
+- kept 8289a1cce8 fix(sync): fall back to bazel-built natives when npm publish lags the upstream tag
+- kept 0babb34dec refactor(sync): classify fork records by file paths only, drop subject check
+- kept 5f2a339ca2 feat(sync): record manual-review acceptances in a durable patch-id ledger
+- kept e2d0db6979 fix(ai): strip uniqueItems from Google/Antigravity tool schemas
+- kept d1178fc352 feat(sync): require pinned repo-local git identity and add sync-log squash script
+- kept a5ad027383 chore(fork): consolidate sync log through v18.0.10
+- kept 446a5b3628 chore(fork): sync log for v18.0.11
+- kept 406e7207c2 chore(fork): sync log for v18.1.0
+- kept 608d1cbd73 chore(fork): sync log for v18.1.1
+- kept a979875481 chore(fork): sync log for v18.1.2
+- kept 82edcc4c60 chore(fork): sync log for v18.1.3
+- kept fb05910157 chore(fork): sync log for v18.1.4
+- kept b045ed7d4e chore(fork): sync log for v18.1.6
+- kept f9fa4676aa fix(sync): accept native leaves when the core meta publish lags
+- kept f33ad7f9d9 chore(fork): sync log for v18.1.8
+- kept 2a241df3b0 docs(ai): document Cloud Code Assist schema rejection workaround
+
+### 2026-09-03 — v18.1.6 → v18.1.8
+
+- kept b743f85a44 feat(ai): enforce Cursor execution policy rejections
+- kept 046a41dd46 fix(ai,coding-agent): normalize gateway model catalog metadata
+- kept 220370857c chore(dev): preserve fork-local development configuration
+- kept 351dfd6dd9 fix(natives): diagnose and safely promote workspace addons
+- kept 407627194b chore(fork): automate parentless syncs with verified npm natives
+- kept 75faa6d4f4 docs(fork): retire macOS 27 Bazel overlay in favor of npm-native syncs
+- kept 4409439198 chore(fork): promote automatically once sync verification passes
+- kept 0ec3c283a3 chore(dev): pin the shared mnemopi bank for worktree sessions
+- kept ad7325948e fix(sync): clear stale unregistered worktree directories
+- kept 8ca3d70d9c fix(coding-agent): decide non-symlink containment by the parent directory
+- kept d8df933cf1 docs(solutions): capture macOS hard-link realpath containment learning
+- kept f18d951d2d docs(solutions): record rejection of context-mode plugin for omp
+- kept 4b7bd6e20d fix(ai): always emit context_length/max_tokens (null fallback) on gateway /v1/models
+- kept 20339adcc7 fix(sync): fall back to bazel-built natives when npm publish lags the upstream tag
+- kept 057f83b260 refactor(sync): classify fork records by file paths only, drop subject check
+- kept e84e67e845 feat(sync): record manual-review acceptances in a durable patch-id ledger
+- kept edcbd828b4 fix(ai): strip uniqueItems from Google/Antigravity tool schemas
+- kept 96a895da11 feat(sync): require pinned repo-local git identity and add sync-log squash script
+- kept 33af4c8410 chore(fork): consolidate sync log through v18.0.10
+- kept 0133780083 chore(fork): sync log for v18.0.11
+- kept ff574cb33b chore(fork): sync log for v18.1.0
+- kept 390390dc09 chore(fork): sync log for v18.1.1
+- kept 3e839111de chore(fork): sync log for v18.1.2
+- kept b972f1f900 chore(fork): sync log for v18.1.3
+- kept b39fde0398 chore(fork): sync log for v18.1.4
+- kept c14084e801 chore(fork): sync log for v18.1.6
+- kept 0d00169f53 fix(sync): accept native leaves when the core meta publish lags
+
+### 2026-09-03 — v18.1.5 → v18.1.6
+
+- kept 042b83dce0 feat(ai): enforce Cursor execution policy rejections
+- kept bfe1bb667f fix(ai,coding-agent): normalize gateway model catalog metadata
+- kept 11856841b9 chore(dev): preserve fork-local development configuration
+- kept 14aead6516 fix(natives): diagnose and safely promote workspace addons
+- kept cec3439bf8 chore(fork): automate parentless syncs with verified npm natives
+- kept 65424fb8f0 docs(fork): retire macOS 27 Bazel overlay in favor of npm-native syncs
+- kept 91cc0de9ea chore(fork): promote automatically once sync verification passes
+- kept ef538e30d0 chore(dev): pin the shared mnemopi bank for worktree sessions
+- kept 9aff26d9e4 fix(sync): clear stale unregistered worktree directories
+- kept 8fc8af8110 fix(coding-agent): decide non-symlink containment by the parent directory
+- kept c4cc746569 docs(solutions): capture macOS hard-link realpath containment learning
+- kept f389983302 docs(solutions): record rejection of context-mode plugin for omp
+- kept 011d0fc826 fix(ai): always emit context_length/max_tokens (null fallback) on gateway /v1/models
+- kept 121c5e6a51 fix(sync): fall back to bazel-built natives when npm publish lags the upstream tag
+- kept 5f9483423a refactor(sync): classify fork records by file paths only, drop subject check
+- kept 7d724a979e feat(sync): record manual-review acceptances in a durable patch-id ledger
+- kept 82ae2f103c fix(ai): strip uniqueItems from Google/Antigravity tool schemas
+- kept 1b0ec8c3eb feat(sync): require pinned repo-local git identity and add sync-log squash script
+- kept 07b76ccf32 chore(fork): consolidate sync log through v18.0.10
+- kept 6d34924421 chore(fork): sync log for v18.0.11
+- kept 0651cac071 chore(fork): sync log for v18.1.0
+- kept edd30582fa chore(fork): sync log for v18.1.1
+- kept bf4779f0f1 chore(fork): sync log for v18.1.2
+- kept 2b9942540e chore(fork): sync log for v18.1.3
+- kept 311df99531 chore(fork): sync log for v18.1.4
+
+### 2026-09-02 — v18.1.3 → v18.1.4
+
+- kept 1afee10e36 feat(ai): enforce Cursor execution policy rejections
+- kept dea2d098cc fix(ai,coding-agent): normalize gateway model catalog metadata
+- kept 37c7646597 chore(dev): preserve fork-local development configuration
+- kept 6fb1fb9600 fix(natives): diagnose and safely promote workspace addons
+- kept 0dd2b02d92 chore(fork): automate parentless syncs with verified npm natives
+- kept 5f7cd39c39 docs(fork): retire macOS 27 Bazel overlay in favor of npm-native syncs
+- kept c764b73dbe chore(fork): promote automatically once sync verification passes
+- kept c41db6840b chore(dev): pin the shared mnemopi bank for worktree sessions
+- kept 8c6e584fb0 fix(sync): clear stale unregistered worktree directories
+- kept 50c3f0c057 fix(coding-agent): decide non-symlink containment by the parent directory
+- kept d04a2266e8 docs(solutions): capture macOS hard-link realpath containment learning
+- kept 603763c785 docs(solutions): record rejection of context-mode plugin for omp
+- kept 938b025264 fix(ai): always emit context_length/max_tokens (null fallback) on gateway /v1/models
+- kept 959ed9b896 fix(sync): fall back to bazel-built natives when npm publish lags the upstream tag
+- kept 1bbb1f4174 refactor(sync): classify fork records by file paths only, drop subject check
+- kept 51e9b443c2 feat(sync): record manual-review acceptances in a durable patch-id ledger
+- kept 86399517ff fix(ai): strip uniqueItems from Google/Antigravity tool schemas
+- kept 484547206d feat(sync): require pinned repo-local git identity and add sync-log squash script
+- kept f5e332c0d2 chore(fork): consolidate sync log through v18.0.10
+- kept 6f449d2606 chore(fork): sync log for v18.0.11
+- kept 596f9f3e2c chore(fork): sync log for v18.1.0
+- kept de7158ff0e chore(fork): sync log for v18.1.1
+- kept 4498c3fc30 chore(fork): sync log for v18.1.2
+- kept 32711abf14 chore(fork): sync log for v18.1.3
+
+### 2026-09-02 — v18.1.2 → v18.1.3
+
+- kept 321e317c1d feat(ai): enforce Cursor execution policy rejections
+- kept 3e6a6d83d7 fix(ai,coding-agent): normalize gateway model catalog metadata
+- kept 454e637ffa chore(dev): preserve fork-local development configuration
+- kept 49fd791a22 fix(natives): diagnose and safely promote workspace addons
+- kept 7474b665fc chore(fork): automate parentless syncs with verified npm natives
+- kept 9ac62c8dc3 docs(fork): retire macOS 27 Bazel overlay in favor of npm-native syncs
+- kept 9471c7ca9b chore(fork): promote automatically once sync verification passes
+- kept b0e1cec476 chore(dev): pin the shared mnemopi bank for worktree sessions
+- kept 2c86e742b7 fix(sync): clear stale unregistered worktree directories
+- kept 44460c87aa fix(coding-agent): decide non-symlink containment by the parent directory
+- kept 5abacdd2dd docs(solutions): capture macOS hard-link realpath containment learning
+- kept a70dc65ba7 docs(solutions): record rejection of context-mode plugin for omp
+- kept f73463661d fix(ai): always emit context_length/max_tokens (null fallback) on gateway /v1/models
+- kept 21165fd561 fix(sync): fall back to bazel-built natives when npm publish lags the upstream tag
+- kept 5d85ca1b0b refactor(sync): classify fork records by file paths only, drop subject check
+- kept 98d1c9a4e6 feat(sync): record manual-review acceptances in a durable patch-id ledger
+- kept 1b1dc6ea59 fix(ai): strip uniqueItems from Google/Antigravity tool schemas
+- kept 1b26f79898 feat(sync): require pinned repo-local git identity and add sync-log squash script
+- kept 7a5b73003a chore(fork): consolidate sync log through v18.0.10
+- kept 6ff57b0ccb chore(fork): sync log for v18.0.11
+- kept 18ab3b00b0 chore(fork): sync log for v18.1.0
+- kept 2f0ee69402 chore(fork): sync log for v18.1.1
+- kept 19caf91f62 chore(fork): sync log for v18.1.2
+
+### 2026-09-02 — v18.1.1 → v18.1.2
+
+- kept 5732e24e7b feat(ai): enforce Cursor execution policy rejections
+- kept 2f07f83416 fix(ai,coding-agent): normalize gateway model catalog metadata
+- kept c21a787050 chore(dev): preserve fork-local development configuration
+- kept 779b580e15 fix(natives): diagnose and safely promote workspace addons
+- kept 2cced5c93b chore(fork): automate parentless syncs with verified npm natives
+- kept 80fc123ff3 docs(fork): retire macOS 27 Bazel overlay in favor of npm-native syncs
+- kept 857ae4a7da chore(fork): promote automatically once sync verification passes
+- kept 69f1aaf77e chore(dev): pin the shared mnemopi bank for worktree sessions
+- kept e7f351edaf fix(sync): clear stale unregistered worktree directories
+- kept 9ce640c1fe fix(coding-agent): decide non-symlink containment by the parent directory
+- kept eda15ce7a2 docs(solutions): capture macOS hard-link realpath containment learning
+- kept 34e356c545 docs(solutions): record rejection of context-mode plugin for omp
+- kept 663f1ea976 fix(ai): always emit context_length/max_tokens (null fallback) on gateway /v1/models
+- kept 88bf9659ee fix(sync): fall back to bazel-built natives when npm publish lags the upstream tag
+- kept f227776730 refactor(sync): classify fork records by file paths only, drop subject check
+- kept 2ab5a09687 feat(sync): record manual-review acceptances in a durable patch-id ledger
+- kept 6ab6bb8c35 fix(ai): strip uniqueItems from Google/Antigravity tool schemas
+- kept dc9171adf6 feat(sync): require pinned repo-local git identity and add sync-log squash script
+- kept 2cca9dd3a0 chore(fork): consolidate sync log through v18.0.10
+- kept 41575765d9 chore(fork): sync log for v18.0.11
+- kept 21c484c5d5 chore(fork): sync log for v18.1.0
+- kept c288eef41f chore(fork): sync log for v18.1.1
+
+### 2026-09-01 — v18.1.0 → v18.1.1
+
+- kept df91d39932 feat(ai): enforce Cursor execution policy rejections
+- kept 7140529174 fix(ai,coding-agent): normalize gateway model catalog metadata
+- kept b0c345c85e chore(dev): preserve fork-local development configuration
+- kept 397a27d081 fix(natives): diagnose and safely promote workspace addons
+- kept d9517e4899 chore(fork): automate parentless syncs with verified npm natives
+- kept cd6fe212db docs(fork): retire macOS 27 Bazel overlay in favor of npm-native syncs
+- kept dffa08ed76 chore(fork): promote automatically once sync verification passes
+- kept 0e9035ddc9 chore(dev): pin the shared mnemopi bank for worktree sessions
+- kept 7a49fc934f fix(sync): clear stale unregistered worktree directories
+- kept 259a90e2be fix(coding-agent): decide non-symlink containment by the parent directory
+- kept 742bbbf8aa docs(solutions): capture macOS hard-link realpath containment learning
+- kept 1234232393 docs(solutions): record rejection of context-mode plugin for omp
+- kept b82bf02bd1 fix(ai): always emit context_length/max_tokens (null fallback) on gateway /v1/models
+- kept 091d11b294 fix(sync): fall back to bazel-built natives when npm publish lags the upstream tag
+- kept 3f70e338e6 refactor(sync): classify fork records by file paths only, drop subject check
+- kept 2b19408480 feat(sync): record manual-review acceptances in a durable patch-id ledger
+- kept 8b258a3c23 fix(ai): strip uniqueItems from Google/Antigravity tool schemas
+- kept 6f11c98a7a feat(sync): require pinned repo-local git identity and add sync-log squash script
+- kept c701a5c180 chore(fork): consolidate sync log through v18.0.10
+- kept e40d83ec43 chore(fork): sync log for v18.0.11
+- kept 8a85fae905 chore(fork): sync log for v18.1.0
+
+### 2026-09-01 — v18.0.11 → v18.1.0
+
+- kept c7e500fad8 feat(ai): enforce Cursor execution policy rejections
+- kept d3ca4444bf fix(ai,coding-agent): normalize gateway model catalog metadata
+- kept cb6425286f chore(dev): preserve fork-local development configuration
+- kept 85207acb2c fix(natives): diagnose and safely promote workspace addons
+- kept ed7a83473d chore(fork): automate parentless syncs with verified npm natives
+- kept 2e83f3db6d docs(fork): retire macOS 27 Bazel overlay in favor of npm-native syncs
+- kept 76733cc0d8 chore(fork): promote automatically once sync verification passes
+- kept ba9b05cd65 chore(dev): pin the shared mnemopi bank for worktree sessions
+- kept b92f663e20 fix(sync): clear stale unregistered worktree directories
+- kept f947849370 fix(coding-agent): decide non-symlink containment by the parent directory
+- kept 63f1740556 docs(solutions): capture macOS hard-link realpath containment learning
+- kept a3960cd360 docs(solutions): record rejection of context-mode plugin for omp
+- kept 6f983dbd34 fix(ai): always emit context_length/max_tokens (null fallback) on gateway /v1/models
+- kept 696e786421 fix(sync): fall back to bazel-built natives when npm publish lags the upstream tag
+- kept 85bedd39ab refactor(sync): classify fork records by file paths only, drop subject check
+- kept 110bbe74ab feat(sync): record manual-review acceptances in a durable patch-id ledger
+- kept 7d78867f53 fix(ai): strip uniqueItems from Google/Antigravity tool schemas
+- kept 33a1732e01 feat(sync): require pinned repo-local git identity and add sync-log squash script
+- kept f62755ce09 chore(fork): consolidate sync log through v18.0.10
+- kept 67a2acfabc chore(fork): sync log for v18.0.11
+
+### 2026-08-29 — v18.0.10 → v18.0.11
+
+- kept 4ccf5253c4 feat(ai): enforce Cursor execution policy rejections
+- kept f4a14bbf1a fix(ai,coding-agent): normalize gateway model catalog metadata
+- kept f09a597390 chore(dev): preserve fork-local development configuration
+- kept d7ce31c1e6 fix(natives): diagnose and safely promote workspace addons
+- kept 29f4cb41bf chore(fork): automate parentless syncs with verified npm natives
+- kept c816c83c94 docs(fork): retire macOS 27 Bazel overlay in favor of npm-native syncs
+- kept 6c45361dc7 chore(fork): promote automatically once sync verification passes
+- kept e6865f9624 chore(dev): pin the shared mnemopi bank for worktree sessions
+- kept c2841efb66 fix(sync): clear stale unregistered worktree directories
+- kept 6c0bce240e fix(coding-agent): decide non-symlink containment by the parent directory
+- kept e830aba3e1 docs(solutions): capture macOS hard-link realpath containment learning
+- kept a73306a76d docs(solutions): record rejection of context-mode plugin for omp
+- kept c5298326d5 fix(ai): always emit context_length/max_tokens (null fallback) on gateway /v1/models
+- kept 034cebf3da fix(sync): fall back to bazel-built natives when npm publish lags the upstream tag
+- kept 470abff79d refactor(sync): classify fork records by file paths only, drop subject check
+- kept d1b57af916 feat(sync): record manual-review acceptances in a durable patch-id ledger
+- kept ddaca1296c fix(ai): strip uniqueItems from Google/Antigravity tool schemas
+- kept 14946bac7c feat(sync): require pinned repo-local git identity and add sync-log squash script
+- kept 6cf78a53eb chore(fork): consolidate sync log through v18.0.10
+
 ### 2026-08-28 — v18.0.8 → v18.0.10
 
 - kept 9654275572 feat(ai): enforce Cursor execution policy rejections
