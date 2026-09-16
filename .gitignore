@@ -98,3 +98,6 @@ packages/coding-agent/bench/boot-baseline.json
 
 # Stakpak session files
 .stakpak/session*
+
+# Sync-upstream resume checkpoint (scripts/sync-upstream.ts); worktree-local, never committed.
+.sync-upstream-progress.json
