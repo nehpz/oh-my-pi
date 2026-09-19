@@ -1,6 +1,9 @@
 # Changelog
 
 ## [Unreleased]
+### Fixed
+
+- Fixed gateway credential health checks reporting unrelated MCP OAuth accounts as inference authentication failures.
 
 ## [18.2.6] - 2026-09-18
 

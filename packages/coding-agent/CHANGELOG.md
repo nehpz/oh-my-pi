@@ -1,6 +1,9 @@
 # Changelog
 
 ## [Unreleased]
+### Fixed
+
+- Fixed `omp auth-gateway check`, including `--strict`, probing unrelated MCP OAuth credentials.
 
 ## [18.2.6] - 2026-09-18
 

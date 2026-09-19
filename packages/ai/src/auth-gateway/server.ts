@@ -21,7 +21,12 @@
 import { Effort } from "@oh-my-pi/pi-catalog/effort";
 import { extractHttpStatusFromError, logger } from "@oh-my-pi/pi-utils";
 import type { ApiKeyResolver } from "../auth-retry";
-import type { AuthStorage } from "../auth-storage";
+import {
+	type AuthStorage,
+	type CheckCredentialsOptions,
+	type CredentialHealthResult,
+	isManagedMCPOAuthCredentialId,
+} from "../auth-storage";
 import * as AIError from "../error";
 import { classifyGatewayError } from "../error/gateway";
 import { isUsageLimitOutcome } from "../error/rate-limit";
@@ -890,6 +895,21 @@ async function handleUsage(storage: AuthStorage, signal: AbortSignal): Promise<R
 }
 
 /**
+ * Exclude managed MCP OAuth credentials before refresh or probing: the gateway
+ * does not serve MCP requests, so their health is outside this check's scope.
+ * Callers cannot override the MCP exclusion.
+ */
+export async function checkAuthGatewayCredentials(
+	storage: AuthStorage,
+	options?: Omit<CheckCredentialsOptions, "providerFilter">,
+): Promise<CredentialHealthResult[]> {
+	return storage.checkCredentials({
+		...options,
+		providerFilter: provider => !isManagedMCPOAuthCredentialId(provider),
+	});
+}
+
+/**
  * Per-credential health probe surfaced on `GET /v1/credentials/check`. Tells
  * the caller exactly which row in their broker is producing 401s — the
  * aggregate `/v1/usage` endpoint silently drops failed credentials, which is
@@ -901,7 +921,7 @@ async function handleUsage(storage: AuthStorage, signal: AbortSignal): Promise<R
  * a clean diagnosis and getting a 429 storm.
  */
 async function handleCredentialsCheck(storage: AuthStorage, signal: AbortSignal): Promise<Response> {
-	const credentials = await storage.checkCredentials({ signal });
+	const credentials = await checkAuthGatewayCredentials(storage, { signal });
 	return json(200, { generatedAt: Date.now(), credentials });
 }
 

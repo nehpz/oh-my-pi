@@ -327,6 +327,27 @@ export interface CheckCredentialsOptions {
 	completionProbe?: CompletionProbe;
 	/** Per-credential completion probe timeout (ms). Defaults to `timeoutMs`. */
 	completionTimeoutMs?: number;
+	/**
+	 * Optional row filter applied BEFORE any per-credential work (identity
+	 * extraction, OAuth refresh, usage/completion probes). Return `false` to
+	 * skip the row entirely — it produces no {@link CredentialHealthResult}.
+	 * The auth-gateway uses this to exclude managed MCP OAuth credentials,
+	 * which are not inference providers and must never be refreshed or probed
+	 * by a credential check.
+	 */
+	providerFilter?: (provider: string) => boolean;
+}
+
+/**
+ * Whether a credential id was minted by OMP's MCP OAuth flows (either era):
+ * profile-scoped `mcp_oauth:profile:<profile>:<serverUrl>`, legacy URL-keyed
+ * `mcp_oauth:<serverUrl>`, or legacy random `mcp_oauth_<rand>` ids. MCP OAuth
+ * rows are managed by the coding-agent's MCP layer, not inference providers —
+ * callers probing inference credentials (e.g. the auth-gateway) use this to
+ * skip them via {@link CheckCredentialsOptions.providerFilter}.
+ */
+export function isManagedMCPOAuthCredentialId(credentialId: string | undefined): credentialId is string {
+	return !!credentialId && (credentialId.startsWith("mcp_oauth_") || credentialId.startsWith("mcp_oauth:"));
 }
 
 // ─────────────────────────────────────────────────────────────────────────────
@@ -4554,6 +4575,7 @@ export class AuthStorage {
 		const results: CredentialHealthResult[] = [];
 		for (const row of stored) {
 			options?.signal?.throwIfAborted();
+			if (options?.providerFilter && !options.providerFilter(row.provider)) continue;
 			const base: CredentialHealthResult = {
 				id: row.id,
 				provider: row.provider,
