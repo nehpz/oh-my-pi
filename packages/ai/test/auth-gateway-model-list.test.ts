@@ -35,6 +35,7 @@ test("model listing exposes one provider-qualified route per upstream model", as
 					display_name: "shared-model",
 					context_length: 200_000,
 					max_output_tokens: 32_768,
+					max_tokens: 32_768,
 					input_modalities: ["text"],
 				},
 				{
@@ -45,6 +46,7 @@ test("model listing exposes one provider-qualified route per upstream model", as
 					display_name: "shared-model",
 					context_length: 200_000,
 					max_output_tokens: 32_768,
+					max_tokens: 32_768,
 					input_modalities: ["text"],
 				},
 			],

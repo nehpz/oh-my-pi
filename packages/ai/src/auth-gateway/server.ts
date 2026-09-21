@@ -73,7 +73,6 @@ import type {
 } from "./types";
 import { DEFAULT_AUTH_GATEWAY_BIND } from "./types";
 
-
 // `parseBind` lives in ../utils/parse-bind so the gateway and broker can't
 // drift on accepted inputs (e.g. empty hostname, IPv6 brackets).
 
