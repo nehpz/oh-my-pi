@@ -3,13 +3,14 @@
  */
 
 import { PROVIDER_REGISTRY } from "@oh-my-pi/pi-ai";
+import { isManagedMCPOAuthCredentialId } from "@oh-my-pi/pi-ai/auth-storage";
 import chalk from "@oh-my-pi/pi-utils/chalk";
 import { Args, Command, Flags } from "@oh-my-pi/pi-utils/cli";
 import { getActiveProfile } from "@oh-my-pi/pi-utils/dirs";
 import { tokenHelp as commandHelp } from "../cli/command-help";
 import { isAuthenticated, ModelRegistry } from "../config/model-registry";
 import { refreshStoredManagedMcpOAuthCredential } from "../mcp/oauth-credentials";
-import { isManagedMCPOAuthCredentialId, mcpOAuthCredentialProfile } from "../mcp/oauth-flow";
+import { mcpOAuthCredentialProfile } from "../mcp/oauth-flow";
 import { discoverAuthStorage } from "../sdk";
 import type { AuthStorage } from "../session/auth-storage";
 import { getAvailableAuthMethods } from "../web/search/providers/perplexity-auth";
