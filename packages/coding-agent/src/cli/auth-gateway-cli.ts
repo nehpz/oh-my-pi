@@ -34,6 +34,7 @@ import {
 } from "@oh-my-pi/pi-ai/auth-broker";
 import {
 	type AuthGatewayClient,
+	checkAuthGatewayCredentials,
 	DEFAULT_AUTH_GATEWAY_BIND,
 	parseAuthGatewayClients,
 	startAuthGateway,
@@ -872,7 +873,7 @@ async function runCheck(flags: AuthGatewayCommandArgs["flags"]): Promise<void> {
 	});
 	try {
 		await storage.credentials.reload();
-		const results = await storage.health.check({
+		const results = await checkAuthGatewayCredentials(storage, {
 			excludeProviders: new Set(cfgDisabledProviders.get(settings)),
 			...(flags.strict
 				? { completionProbe: createStrictCompletionProbe(), completionTimeoutMs: STRICT_PROBE_OVERALL_TIMEOUT_MS }
