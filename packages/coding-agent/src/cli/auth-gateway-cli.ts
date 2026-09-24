@@ -32,7 +32,7 @@ import {
 	RemoteAuthCredentialStore,
 	type SnapshotResponse,
 } from "@oh-my-pi/pi-ai/auth-broker";
-import { DEFAULT_AUTH_GATEWAY_BIND, startAuthGateway } from "@oh-my-pi/pi-ai/auth-gateway";
+import { checkAuthGatewayCredentials, DEFAULT_AUTH_GATEWAY_BIND, startAuthGateway } from "@oh-my-pi/pi-ai/auth-gateway";
 import {
 	type GeneratedProvider,
 	getBundledModels,
@@ -791,7 +791,7 @@ async function runCheck(flags: AuthGatewayCommandArgs["flags"]): Promise<void> {
 	});
 	try {
 		await storage.credentials.reload();
-		const results = await storage.health.check({
+		const results = await checkAuthGatewayCredentials(storage, {
 			excludeProviders: new Set(cfgDisabledProviders.get(settings)),
 			...(flags.strict
 				? { completionProbe: createStrictCompletionProbe(), completionTimeoutMs: STRICT_PROBE_OVERALL_TIMEOUT_MS }
