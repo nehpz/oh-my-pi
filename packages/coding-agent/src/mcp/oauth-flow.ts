@@ -33,14 +33,6 @@ export function mcpOAuthCredentialId(serverUrl: string, profile: string | undefi
 	return `${MCP_OAUTH_PROFILE_CREDENTIAL_PREFIX}${profile ?? "default"}:${serverUrl}`;
 }
 
-/** Whether a credential id was minted by OMP's MCP OAuth flows (either era). */
-export function isManagedMCPOAuthCredentialId(credentialId: string | undefined): credentialId is string {
-	return (
-		!!credentialId &&
-		(credentialId.startsWith("mcp_oauth_") || credentialId.startsWith(MCP_OAUTH_URL_CREDENTIAL_PREFIX))
-	);
-}
-
 /**
  * Profile segment of a profile-scoped `mcp_oauth:profile:<profile>:<serverUrl>`
  * credential id, or `undefined` for legacy non-profile-scoped managed ids
