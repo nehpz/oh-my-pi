@@ -98,6 +98,51 @@ For any future local change:
 
 <!-- Appended by scripts/sync-upstream.ts; newest first. -->
 
+### 2026-09-25 — v18.3.0 → v18.3.1
+
+- kept 787fb98797 feat(ai): enforce Cursor execution policy rejections
+- kept 0eb13dda1d fix(ai,coding-agent): normalize gateway model catalog metadata
+- kept 8467aa0d7f chore(dev): preserve fork-local development configuration
+- kept 3251138bc4 fix(natives): diagnose and safely promote workspace addons
+- kept 0da95d50cf chore(fork): automate parentless syncs with verified npm natives
+- kept 662b315a27 docs(fork): retire macOS 27 Bazel overlay in favor of npm-native syncs
+- kept dc73239567 chore(fork): promote automatically once sync verification passes
+- kept cf093acc0e chore(dev): pin the shared mnemopi bank for worktree sessions
+- kept b3261602ee fix(sync): clear stale unregistered worktree directories
+- kept 7e6c3b8652 fix(coding-agent): decide non-symlink containment by the parent directory
+- kept d420fdc41f docs(solutions): capture macOS hard-link realpath containment learning
+- kept 73e95980d9 docs(solutions): record rejection of context-mode plugin for omp
+- kept c28a96f7a4 fix(ai): always emit context_length/max_tokens (null fallback) on gateway /v1/models
+- kept 0b2b6ce508 fix(sync): fall back to bazel-built natives when npm publish lags the upstream tag
+- kept af7554d98a refactor(sync): classify fork records by file paths only, drop subject check
+- kept 51cd586d66 feat(sync): record manual-review acceptances in a durable patch-id ledger
+- kept f2fc537f00 fix(ai): strip uniqueItems from Google/Antigravity tool schemas
+- kept 7319f67b89 feat(sync): require pinned repo-local git identity and add sync-log squash script
+- kept 6fde1cc484 chore(fork): consolidate sync log through v18.0.10
+- kept 06db5f1f12 fix(sync): accept native leaves when the core meta publish lags
+- kept da02c017ab docs(ai): document Cloud Code Assist schema rejection workaround
+- kept 09f824cd8e fix: resolve Bun executable before setting omp process name
+- kept 4bc1c974ef chore(fork): record manual-review acceptances
+- kept 8deb694348 chore(config): enable jbcontext MCP server
+- kept 819f304501 chore(deps): pin Bun package manager to v1.4.2
+- kept 8e66b1fd68 chore(fork): record manual-review acceptances
+- kept ee6ee806a0 chore(fork): consolidate sync log through v18.2.0
+- kept b4b97d90b4 chore(fork): ignore the sync-upstream resume checkpoint
+- kept 561bd03601 chore(fork): sync log for v18.2.1
+- kept d27b2285d5 chore(fork): sync log for v18.2.2
+- kept 9a17f1eb70 chore(fork): sync log for v18.2.3
+- kept 2c54a99688 chore(fork): sync log for v18.2.4
+- kept 39dc0c515c chore(fork): sync log for v18.2.5
+- kept d174d59fad chore(fork): sync log for v18.2.6
+- kept 4e6b756881 chore(fork): sync log for v18.2.7
+- kept 186152193f fix(fork): align gateway checks with v18.2.8 replant
+- kept b0c5320224 chore(fork): sync log for v18.2.8
+- kept 27293c2325 chore(fork): sync log for v18.2.9
+- kept 5a9c9e43e8 chore(fork): sync log for v18.2.10
+- kept 0c3ecc3f1a chore(fork): sync log for v18.2.11
+- kept 92edf3208c fix(auth-gateway): exclude MCP credentials from health checks
+- kept 838d4e394d chore(fork): sync log for v18.3.0
+
 ### 2026-09-24 — v18.2.11 → v18.3.0
 
 - kept bddf9411a5 feat(ai): enforce Cursor execution policy rejections
