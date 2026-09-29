@@ -44,6 +44,25 @@ mismatched progress is invalid and reruns preparation. Npm acquisition uses the
 official registry, exact versions, no cache, frozen manifest, and disabled
 lifecycle scripts; failures stop before promotion and preserve retry state.
 
+### Post-promotion service checks
+
+After promotion, the script restarts the auth broker and waits for `/v1/healthz`
+to report the target version before restarting the gateway. Gateway `/healthz`
+must then report the same version. Each service has a 60-second elapsed-time
+readiness deadline; individual requests, including their response bodies, are
+limited to 1.5 seconds or the remaining deadline, whichever is shorter.
+
+The authenticated `/v1/models` check retains its five-second request/body timeout
+and verifies unique provider/id pairs and `context_length`. Credential-level
+`auth-gateway check` failures remain informational.
+
+If a post-promotion service check fails, the upgrade is already live and pushed.
+The error names the failed stage and prints the command to resume:
+`bun scripts/sync-upstream.ts vX.Y.Z`. Re-running the same version performs
+post-promotion checks and records the sync log without replanting the stack.
+Use rollback only when the promoted code is confirmed broken, not merely because
+a readiness check timed out.
+
 ## Conflict decision rule
 
 When the replant stops on a conflicted patch, classify the conflict:
@@ -74,17 +93,18 @@ Prefer upstream, drop mine: when in doubt whether upstream's version fully cover
 
 ## Rollback
 
-If the post-promotion health check fails (pre-promotion failures abort before `main` ever moves):
+If the promoted code is confirmed broken (pre-promotion failures abort before `main` ever moves):
 
 ```bash
 git reset --hard fork/pre-vX.Y.Z
 bun install
 launchctl kickstart -k gui/$UID/com.omp.auth-broker
+until curl -fsS --max-time 2 http://127.0.0.1:8765/v1/healthz; do sleep 1; done
 launchctl kickstart -k gui/$UID/com.omp.auth-gateway
 curl -fsS http://127.0.0.1:4000/healthz
 ```
 
-This restores the CLI and inference services to the last known-good state in under a minute. Investigate in the sync worktree afterwards, without time pressure.
+This restores the local CLI and inference services to the last known-good state; it does not rewind `origin/main`. Investigate in the sync worktree afterwards.
 
 ## Patch-authoring rules
 
