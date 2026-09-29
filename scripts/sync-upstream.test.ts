@@ -44,6 +44,8 @@ import {
 	upstreamTag,
 	validateAcquiredNativePackage,
 	validatePreparationEvidence,
+	verifyGatewayModels,
+	waitForServiceHealth,
 } from "./sync-upstream";
 
 afterEach(() => {
@@ -903,6 +905,193 @@ describe("phase skip and native addon contracts", () => {
 			expect(loaded.supersessionVerdicts[testPatch.sha].result).toBe("superseded");
 		} finally {
 			await fs.rm(dir, { recursive: true, force: true });
+		}
+	});
+});
+
+describe("service restart readiness", () => {
+	it("waits for a healthy response at the expected version, not just any response", async () => {
+		// {ok:false} at the right version and {ok:true} at the wrong version are
+		// both unacceptable; the wait can only resolve on the third response.
+		const responses = [
+			{ ok: false, version: "18.4.4" },
+			{ ok: true, version: "18.4.3" },
+			{ ok: true, version: "18.4.4" },
+		];
+		let requests = 0;
+		const server = Bun.serve({
+			port: 0,
+			hostname: "127.0.0.1",
+			fetch() {
+				const body = responses[Math.min(requests++, responses.length - 1)];
+				return Response.json(body, { status: body.ok ? 200 : 503 });
+			},
+		});
+		try {
+			await waitForServiceHealth("auth-broker", `http://127.0.0.1:${server.port}/v1/healthz`, "18.4.4", 5000);
+			expect(requests).toBeGreaterThanOrEqual(3);
+		} finally {
+			server.stop(true);
+		}
+	});
+
+	it("times out on a persistent old version naming expected and observed versions", async () => {
+		const server = Bun.serve({
+			port: 0,
+			hostname: "127.0.0.1",
+			fetch: () => Response.json({ ok: true, version: "18.4.3" }),
+		});
+		try {
+			const started = performance.now();
+			const err = await waitForServiceHealth(
+				"auth-broker",
+				`http://127.0.0.1:${server.port}/v1/healthz`,
+				"18.4.4",
+				120,
+			).then(
+				() => null,
+				(e: unknown) => e,
+			);
+			expect(performance.now() - started).toBeLessThan(120 + 400);
+			expect(String(err)).toMatch(/auth-broker/);
+			expect(String(err)).toMatch(/18\.4\.4/);
+			expect(String(err)).toMatch(/18\.4\.3/);
+		} finally {
+			server.stop(true);
+		}
+	});
+
+	it("enforces the total deadline across a hanging response body", async () => {
+		const server = Bun.serve({
+			port: 0,
+			hostname: "127.0.0.1",
+			fetch() {
+				return new Response(
+					new ReadableStream({
+						start(controller) {
+							// flush headers + partial JSON, then hold until server stop
+							controller.enqueue(new TextEncoder().encode('{"ok":true,"version":"18.4.3'));
+						},
+					}),
+				);
+			},
+		});
+		try {
+			const started = performance.now();
+			const err = await waitForServiceHealth(
+				"auth-gateway",
+				`http://127.0.0.1:${server.port}/healthz`,
+				"18.4.4",
+				80,
+			).then(
+				() => null,
+				(e: unknown) => e,
+			);
+			expect(performance.now() - started).toBeLessThan(80 + 400);
+			expect(String(err)).toMatch(/auth-gateway|127\.0\.0\.1/);
+		} finally {
+			server.stop(true);
+		}
+	});
+
+	it("authenticates and accepts a bare model id reused across distinct providers", async () => {
+		// Fixture enforces the Bearer contract itself: wrong/missing token -> 401.
+		const token = "fixture-secret-token";
+		const server = Bun.serve({
+			port: 0,
+			hostname: "127.0.0.1",
+			fetch(req) {
+				if (req.headers.get("authorization") !== `Bearer ${token}`) {
+					return new Response("unauthorized", { status: 401 });
+				}
+				return Response.json({
+					data: [
+						{ id: "gpt-5", owned_by: "openai", context_length: 128000 },
+						{ id: "gpt-5", owned_by: "azure", context_length: null },
+					],
+				});
+			},
+		});
+		try {
+			const url = `http://127.0.0.1:${server.port}/v1/models`;
+			// Wrong token must fail against the auth-enforcing fixture.
+			const denied = await verifyGatewayModels(url, "wrong-token").then(
+				() => null,
+				(e: unknown) => e,
+			);
+			expect(denied).not.toBeNull();
+			expect(await verifyGatewayModels(url, token)).toBe(2);
+		} finally {
+			server.stop(true);
+		}
+	});
+
+	it("rejects HTTP failures, duplicate provider/id entries, and missing context_length distinctly", async () => {
+		const token = "fixture-secret-token";
+		const cases: Array<{ pattern: RegExp; status: number; body?: unknown }> = [
+			// HTTP-level failure: error must surface the status, not a body contract error.
+			{ pattern: /503/, status: 503 },
+			{
+				pattern: /duplicate/i,
+				status: 200,
+				body: {
+					data: [
+						{ id: "m1", owned_by: "p", context_length: 1 },
+						{ id: "m1", owned_by: "p", context_length: 2 },
+					],
+				},
+			},
+			{ pattern: /context_length/, status: 200, body: { data: [{ id: "m1", owned_by: "p" }] } },
+		];
+		for (const { pattern, status, body } of cases) {
+			const server = Bun.serve({
+				port: 0,
+				hostname: "127.0.0.1",
+				fetch: () => (body === undefined ? new Response("oops", { status }) : Response.json(body)),
+			});
+			try {
+				const err = await verifyGatewayModels(`http://127.0.0.1:${server.port}/v1/models`, token).then(
+					() => null,
+					(e: unknown) => e,
+				);
+				expect(String(err)).toMatch(pattern);
+				expect(String(err)).not.toContain(token);
+			} finally {
+				server.stop(true);
+			}
+		}
+	});
+
+	it("times out with endpoint context when the models response body hangs", async () => {
+		const server = Bun.serve({
+			port: 0,
+			hostname: "127.0.0.1",
+			fetch() {
+				return new Response(
+					new ReadableStream({
+						start(controller) {
+							// flush headers + partial JSON, then hold until server stop
+							controller.enqueue(new TextEncoder().encode('{"data":['));
+						},
+					}),
+				);
+			},
+		});
+		try {
+			const started = performance.now();
+			const err = await verifyGatewayModels(
+				`http://127.0.0.1:${server.port}/v1/models`,
+				"fixture-secret-token",
+				80,
+			).then(
+				() => null,
+				(e: unknown) => e,
+			);
+			expect(performance.now() - started).toBeLessThan(80 + 400);
+			expect(String(err)).toMatch(/timed out|timeout/i);
+			expect(String(err)).toMatch(/v1\/models|127\.0\.0\.1/);
+		} finally {
+			server.stop(true);
 		}
 	});
 });
