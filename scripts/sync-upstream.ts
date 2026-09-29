@@ -22,6 +22,8 @@ import { LEAF_TARGETS } from "../packages/natives/scripts/gen-npm-packages.ts";
 export const UPSTREAM_URL = "https://github.com/can1357/oh-my-pi.git";
 const SERVICE_LABELS = ["com.omp.auth-broker", "com.omp.auth-gateway"] as const;
 const GATEWAY_MODELS_URL = "http://127.0.0.1:4000/v1/models";
+const BROKER_HEALTH_URL = "http://127.0.0.1:8765/v1/healthz";
+const GATEWAY_HEALTH_URL = "http://127.0.0.1:4000/healthz";
 
 const repoRoot = path.resolve(import.meta.dir, "..");
 const worktreePath = path.resolve(repoRoot, "../oh-my-pi-sync");
@@ -986,7 +988,10 @@ export async function verifyNativeAddonLoad(worktreeDir: string, addonRoot: stri
 		const expression = installed
 			? 'import "./packages/natives/native/index.js";'
 			: 'import { loadNative } from "./packages/natives/native/loader-state.js"; loadNative({ nativeDir: process.env.OMP_SYNC_NATIVE_DIR, exclusiveNativeDir: true });';
-		const env = { ...process.env, OMP_SYNC_NATIVE_DIR: path.resolve(addonRoot, NATIVE_RELATIVE_DIR) };
+		const env: Record<string, string | undefined> = {
+			...process.env,
+			OMP_SYNC_NATIVE_DIR: path.resolve(addonRoot, NATIVE_RELATIVE_DIR),
+		};
 		if (variant) env.PI_NATIVE_VARIANT = variant;
 		else delete env.PI_NATIVE_VARIANT;
 		await $`bun -e ${expression}`.cwd(worktreeDir).env(env).quiet();
@@ -1390,42 +1395,75 @@ async function promote(version: string): Promise<void> {
 	console.log("verify: bun install (live checkout)...");
 	await $`bun install`.cwd(repoRoot).quiet();
 }
-async function bounceServices(): Promise<void> {
-	const uid = process.getuid?.() ?? Number((await $`id -u`.quiet()).text().trim());
-	for (const label of SERVICE_LABELS) {
-		console.log(`restarting ${label}...`);
-		await $`launchctl kickstart -k gui/${uid}/${label}`.quiet();
-	}
-	// KeepAlive respawn takes several seconds; poll up to 30s.
-	let health: Response | null = null;
-	for (let i = 0; i < 30 && !health?.ok; i++) {
-		await Bun.sleep(1000);
-		health = await fetch("http://127.0.0.1:4000/healthz", { signal: AbortSignal.timeout(1500) }).catch(() => null);
-	}
-	if (!health?.ok) {
-		throw new Error(
-			`gateway /healthz not responding within 30s of restart (${health ? health.status : "no connection"}); rollback per docs/fork-maintenance.md`,
-		);
-	}
 
-	// Credential-level status is informational only: `check --strict` exits
-	// nonzero on account quota/probe issues unrelated to the sync.
-	const check = await $`${path.resolve(repoRoot, "packages/coding-agent/scripts/omp")} auth-gateway check`
-		.quiet()
-		.nothrow();
-	console.log(check.text().split("\n").slice(-2).join("\n"));
+/** Poll `url` until it returns {ok:true,version:expectedVersion} or `timeoutMs` elapses. */
+export async function waitForServiceHealth(
+	label: string,
+	url: string,
+	expectedVersion: string,
+	timeoutMs = 60_000,
+): Promise<void> {
+	const deadline = performance.now() + timeoutMs;
+	let lastFailure = "no response";
+	for (;;) {
+		const remainingMs = deadline - performance.now();
+		if (remainingMs <= 0) break;
+		try {
+			const res = await fetch(url, { signal: AbortSignal.timeout(Math.min(1500, Math.ceil(remainingMs))) });
+			if (!res.ok) {
+				lastFailure = `HTTP ${res.status}`;
+				await res.body?.cancel();
+			} else {
+				// The fetch signal also covers body consumption.
+				const body = (await res.json()) as { ok?: unknown; version?: unknown };
+				if (body.ok !== true) {
+					lastFailure = `ok=${String(body.ok)}`;
+				} else if (body.version !== expectedVersion) {
+					lastFailure = `version ${String(body.version)} (expected ${expectedVersion})`;
+				} else if (deadline - performance.now() <= 0) {
+					lastFailure = "healthy response arrived after deadline";
+					break;
+				} else {
+					return;
+				}
+			}
+		} catch (err) {
+			lastFailure = err instanceof Error ? err.message : String(err);
+		}
+		const sleepMs = Math.min(1000, deadline - performance.now());
+		if (sleepMs <= 0) break;
+		await Bun.sleep(sleepMs);
+	}
+	throw new Error(`${label} ${url} not healthy within ${timeoutMs}ms: ${lastFailure}`);
+}
 
-	const token = (await $`${path.resolve(repoRoot, "packages/coding-agent/scripts/omp")} auth-gateway token`.quiet())
-		.text()
-		.trim();
-	const res = await fetch(GATEWAY_MODELS_URL, {
-		headers: { authorization: `Bearer ${token}` },
-		signal: AbortSignal.timeout(5000),
-	});
-	if (!res.ok) throw new Error(`GET /v1/models -> ${res.status}; rollback per docs/fork-maintenance.md`);
-	const body = (await res.json()) as {
-		data?: Array<{ id?: string; owned_by?: string; context_length?: number | null }>;
-	};
+/** Fetch /v1/models and validate shape; returns the model count. */
+export async function verifyGatewayModels(url: string, token: string, timeoutMs = 5000): Promise<number> {
+	const signal = AbortSignal.timeout(timeoutMs);
+	let res: Response;
+	try {
+		res = await fetch(url, { headers: { authorization: `Bearer ${token}` }, signal });
+	} catch (err) {
+		const detail = signal.aborted
+			? `timed out after ${timeoutMs}ms`
+			: err instanceof Error
+				? err.message
+				: String(err);
+		throw new Error(`GET ${url} failed: ${detail}`, { cause: err });
+	}
+	if (!res.ok) {
+		await res.body?.cancel();
+		throw new Error(`GET ${url} -> ${res.status}`);
+	}
+	let body: { data?: Array<{ id?: string; owned_by?: string; context_length?: number | null }> };
+	try {
+		body = (await res.json()) as typeof body;
+	} catch (err) {
+		const detail = signal.aborted
+			? `timed out reading body after ${timeoutMs}ms`
+			: `invalid JSON: ${err instanceof Error ? err.message : String(err)}`;
+		throw new Error(`GET ${url} ${detail}`, { cause: err });
+	}
 	const data = body.data ?? [];
 	// Bare ids legitimately collide across providers; the doubling bug's
 	// signature is the same (owned_by, id) pair appearing twice.
@@ -1438,7 +1476,45 @@ async function bounceServices(): Promise<void> {
 	) {
 		throw new Error("health check: /v1/models entries missing context_length");
 	}
-	console.log(`services healthy: ${data.length} model(s), unique ids, context_length present`);
+	return data.length;
+}
+
+async function bounceServices(version: string): Promise<void> {
+	const bare = normalizeVersion(version).slice(1);
+	const uid = process.getuid?.() ?? Number((await $`id -u`.quiet()).text().trim());
+	let stage = "broker restart/readiness";
+	try {
+		console.log(`restarting ${SERVICE_LABELS[0]}...`);
+		await $`launchctl kickstart -k gui/${uid}/${SERVICE_LABELS[0]}`.quiet();
+		await waitForServiceHealth(SERVICE_LABELS[0], BROKER_HEALTH_URL, bare);
+
+		stage = "gateway restart/readiness";
+		console.log(`restarting ${SERVICE_LABELS[1]}...`);
+		await $`launchctl kickstart -k gui/${uid}/${SERVICE_LABELS[1]}`.quiet();
+		await waitForServiceHealth(SERVICE_LABELS[1], GATEWAY_HEALTH_URL, bare);
+
+		// Credential-level status is informational only: `check --strict` exits
+		// nonzero on account quota/probe issues unrelated to the sync.
+		stage = "credential check";
+		const check = await $`${path.resolve(repoRoot, "packages/coding-agent/scripts/omp")} auth-gateway check`
+			.quiet()
+			.nothrow();
+		console.log(check.text().split("\n").slice(-2).join("\n"));
+
+		stage = "token load";
+		const token = (await $`${path.resolve(repoRoot, "packages/coding-agent/scripts/omp")} auth-gateway token`.quiet())
+			.text()
+			.trim();
+
+		stage = "/v1/models check";
+		const count = await verifyGatewayModels(GATEWAY_MODELS_URL, token);
+		console.log(`services healthy: ${count} model(s), unique ids, context_length present`);
+	} catch (err) {
+		throw new Error(
+			`Upgrade to ${version} completed; post-promotion ${stage} failed: ${err instanceof Error ? err.message : String(err)}. Resume with \`bun scripts/sync-upstream.ts ${version}\`; roll back only if the promoted code is confirmed broken.`,
+			{ cause: err },
+		);
+	}
 }
 
 async function writeSyncLog(version: string, baseTag: string, notes: string[]): Promise<void> {
@@ -1554,7 +1630,9 @@ async function cmdSync(
 			return;
 		}
 		console.log(`  7. promote: exact confirmation then push --force-with-lease; bun install`);
-		console.log(`  8. services: kickstart ${SERVICE_LABELS.join(", ")}; /healthz; /v1/models shape`);
+		console.log(
+			`  8. services: kickstart ${SERVICE_LABELS.join(", ")}; wait for broker+gateway /healthz reporting ${version}; /v1/models shape`,
+		);
 		console.log("  9. sync log: append entry to docs/fork-maintenance.md, commit, push");
 		return;
 	}
@@ -1572,7 +1650,7 @@ async function cmdSync(
 			await installAndCleanStagedNativeAddon(stagedNativeRoot, repoRoot);
 		}
 		await $`bun install`.cwd(repoRoot).quiet();
-		await bounceServices();
+		await bounceServices(version);
 		await writeSyncLog(version, (await resolveBaseTagOf(preTag(version))) ?? baseTag, []);
 		return;
 	}
@@ -1668,7 +1746,7 @@ async function cmdSync(
 	}
 
 	await promote(version);
-	await bounceServices();
+	await bounceServices(version);
 	await writeSyncLog(version, baseTag, notes);
 	console.log(`sync to ${version} complete`);
 }
