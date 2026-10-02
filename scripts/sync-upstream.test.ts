@@ -755,6 +755,8 @@ describe("phase skip and native addon contracts", () => {
 		const execRoot = path.join(dir, "execroot");
 		const symlinkPaths = [
 			path.join(dir, `bazel-${path.basename(dir)}`),
+			// Inherited from a copy-on-write clone source with a different basename.
+			path.join(dir, "bazel-oh-my-pi"),
 			path.join(dir, "bazel-bin"),
 			path.join(dir, "bazel-out"),
 			path.join(dir, "bazel-testlogs"),
