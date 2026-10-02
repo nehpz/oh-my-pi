@@ -15,6 +15,7 @@
 import * as fs from "node:fs/promises";
 import * as os from "node:os";
 import * as path from "node:path";
+import * as vcs from "@oh-my-pi/pi-natives/vcs";
 import { isEnoent } from "@oh-my-pi/pi-utils/fs-error";
 import { $ } from "bun";
 import { LEAF_TARGETS } from "../packages/natives/scripts/gen-npm-packages.ts";
@@ -440,19 +441,20 @@ export async function hasNativeAddon(root: string = worktreePath): Promise<boole
 	}
 }
 
-/** Remove Bazel's convenience symlinks so Bun does not rediscover tests through the execroot or output trees. */
+/**
+ * Remove Bazel's convenience symlinks so Bun does not rediscover tests through the execroot or output trees.
+ * Matches every top-level `bazel-*` symlink: a copy-on-write clone inherits the source checkout's
+ * `bazel-<source-basename>` link, not this root's.
+ */
 export async function removeBazelWorkspaceSymlink(root: string): Promise<void> {
-	const symlinkNames = [`bazel-${path.basename(root)}`, "bazel-bin", "bazel-out", "bazel-testlogs"];
+	const entries = await fs.readdir(root, { withFileTypes: true }).catch(err => {
+		if (isEnoent(err)) return [];
+		throw err;
+	});
 	await Promise.all(
-		symlinkNames.map(async name => {
-			const symlinkPath = path.resolve(root, name);
-			try {
-				const entry = await fs.lstat(symlinkPath);
-				if (entry.isSymbolicLink()) await fs.unlink(symlinkPath);
-			} catch (err) {
-				if (!isEnoent(err)) throw err;
-			}
-		}),
+		entries
+			.filter(entry => entry.isSymbolicLink() && entry.name.startsWith("bazel-"))
+			.map(entry => fs.unlink(path.resolve(root, entry.name))),
 	);
 }
 
@@ -630,8 +632,18 @@ async function replant(version: string, baseTag: string): Promise<void> {
 		console.log(`sync worktree already exists at ${worktreePath} (resuming)`);
 	} else {
 		await clearStaleWorktreeDirectory();
-		await git(["worktree", "add", "-B", syncBranch, worktreePath, "main"]).quiet();
-		console.log(`created sync worktree at ${worktreePath} on ${syncBranch}`);
+		// Clone-first (APFS clonefile on macOS) so gitignored outputs — node_modules and the
+		// native addon — land in the worktree for conflict investigation. The addon is main's
+		// build; prepareWorktree still swaps in the exact-version addon before verification.
+		const repository = vcs.requireGit(repoRoot);
+		await repository.createBranch(syncBranch, "main", true);
+		const added = await repository.worktreeAdd(worktreePath, syncBranch, { detach: false, clone: true });
+		if (added.cloneError) console.warn(`worktree clone fell back to plain checkout: ${added.cloneError}`);
+		// The clone also inherits main's bazel-* links into the shared execroot.
+		await removeBazelWorkspaceSymlink(worktreePath);
+		console.log(
+			`created sync worktree at ${worktreePath} on ${syncBranch}${added.clonedWith == null ? "" : " (copy-on-write clone)"}`,
+		);
 	}
 
 	// If a rebase is already in progress (resume after manual conflict work), don't restart it.
