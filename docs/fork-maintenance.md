@@ -10,6 +10,7 @@ This repo is a fork of [can1357/oh-my-pi](https://github.com/can1357/oh-my-pi) c
   - `upstream/vX.Y.Z` — local mirror of upstream's release tag. The newest one that is an ancestor of `main` is the fork's **current base**. Because snapshots are parentless, this tag is the only durable base marker — never delete these.
   - `fork/pre-vX.Y.Z` — the fork's state immediately before the sync to `vX.Y.Z`. Rollback target.
 - **The checkout is production.** The `omp` CLI on PATH is source-linked to this repo, and the launchd services `com.omp.auth-broker` / `com.omp.auth-gateway` exec `packages/coding-agent/scripts/omp` directly. `main` must never sit in a broken or mid-rebase state — all sync work happens in a separate worktree until verified.
+- **The sync worktree is a copy-on-write clone of the checkout** (APFS `clonefile` on macOS; plain checkout fallback elsewhere). It inherits gitignored outputs — `node_modules` and `packages/natives/native/*.node` — so conflict investigation has a loadable addon immediately. That addon is the *previous* release's build; verification always swaps in the exact-version addon first, so only trust native-dependent results after the script's verify phase.
 
 ## Sync procedure
 
