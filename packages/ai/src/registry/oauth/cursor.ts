@@ -157,19 +157,24 @@ function decodeCursorAccessTokenPayload(token: string): unknown | undefined {
 	return JSON.parse(atob(payload.replace(/-/g, "+").replace(/_/g, "/")));
 }
 
-export function extractCursorAccessTokenUserId(accessToken: string): string | undefined {
+/** Full `sub` claim (`auth0|user_…`), the account id policies and identity keys use. */
+export function extractCursorAccessTokenSubject(accessToken: string): string | undefined {
 	try {
 		const payload = decodeCursorAccessTokenPayload(accessToken);
 		if (!payload || typeof payload !== "object" || !("sub" in payload) || typeof payload.sub !== "string") {
 			return undefined;
 		}
-		const { sub } = payload;
-		const parts = sub.split("|");
-		const userId = (parts.length > 1 ? parts[1] : sub).trim();
-		return userId || undefined;
+		return payload.sub.trim() || undefined;
 	} catch {
 		return undefined;
 	}
+}
+
+export function extractCursorAccessTokenUserId(accessToken: string): string | undefined {
+	const sub = extractCursorAccessTokenSubject(accessToken);
+	if (!sub) return undefined;
+	const parts = sub.split("|");
+	return (parts.length > 1 ? parts[1] : sub).trim() || undefined;
 }
 
 function getTokenExpiry(token: string): number {
