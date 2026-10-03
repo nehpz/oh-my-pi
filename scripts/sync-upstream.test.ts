@@ -32,6 +32,7 @@ import {
 	REPLANT_REBASE_FLAGS,
 	RETAINED_LEDGER_RELATIVE,
 	removeBazelWorkspaceSymlink,
+	resolveServiceHost,
 	removeSyncWorktree,
 	rewriteRebaseTodo,
 	saveProgress,
@@ -82,6 +83,41 @@ describe("parseArgs", () => {
 
 	it("rejects multiple version arguments", () => {
 		expect(() => parseArgs(["v17.1.8", "v17.1.9"])).toThrow("unexpected positional argument: v17.1.9");
+	});
+
+	it("parses deploy's optional git ref verbatim and rejects sync flags", () => {
+		expect(parseArgs(["deploy", "--dry-run"])).toMatchObject({ deploy: true, dryRun: true, deployRef: undefined });
+		// A rollback ref is passed to git as-is, not normalized like a release version.
+		expect(parseArgs(["deploy", "fork/pre-v18.5.0"])).toMatchObject({
+			deploy: true,
+			deployRef: "fork/pre-v18.5.0",
+			version: undefined,
+		});
+		expect(() => parseArgs(["deploy", "fork/pre-v18.5.0", "HEAD"])).toThrow("unexpected positional argument: HEAD");
+		expect(() => parseArgs(["v17.1.8", "deploy"])).toThrow(/deploy command accepts only a git ref and --dry-run/);
+		expect(() => parseArgs(["deploy", "--native-mode=npm"])).toThrow(/deploy command accepts only a git ref/);
+		expect(() => parseArgs(["status", "deploy"])).toThrow(/status command does not accept/);
+	});
+});
+
+describe("resolveServiceHost", () => {
+	it("keeps services local with loopback URLs when no service host is configured", () => {
+		expect(resolveServiceHost("", "", "/Users/me/src/omp", "/Users/me")).toEqual({
+			repoDir: "/Users/me/src/omp",
+			gatewayUrl: "http://127.0.0.1:4000",
+		});
+	});
+
+	it("derives the LAN gateway URL from the ssh destination and a home-relative checkout", () => {
+		expect(resolveServiceHost("me@10.0.0.98", "", "/Users/me/src/omp", "/Users/me")).toEqual({
+			ssh: "me@10.0.0.98",
+			repoDir: "src/omp",
+			gatewayUrl: "http://10.0.0.98:4000",
+		});
+		expect(resolveServiceHost("mini.lan", "/opt/omp", "/Users/me/src/omp", "/Users/me")).toMatchObject({
+			repoDir: "/opt/omp",
+			gatewayUrl: "http://mini.lan:4000",
+		});
 	});
 });
 
