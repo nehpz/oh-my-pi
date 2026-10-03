@@ -48,6 +48,23 @@ A Replant state where the rebased code is syntactically valid but an upstream ch
 ### Sync Log
 The append-only record of each sync — base transition, per-Patch outcome, retirements and re-implementations — kept in the fork-maintenance runbook and committed as part of the Patch Stack.
 
+## Auth Services
+
+### Auth Broker
+The long-running service that owns the canonical credential vault and is the only writer of OAuth refresh tokens. It refreshes credentials itself and serves clients a snapshot in which refresh tokens are redacted but access tokens and API keys are not, so anything that can read a snapshot holds usable credentials. Exactly one Auth Broker may hold a given set of credentials: two brokers refreshing the same rotating refresh token make the loser's refresh fail definitively, which disables the credential.
+
+### Auth Gateway
+The service that proxies inference requests through broker-held credentials so its callers never see them. It is itself a Broker Client, and it resolves models only from its own broker-scoped catalog, ignoring any local model configuration on its host.
+
+### Broker Client
+An omp process that resolves credentials through a remote Auth Broker instead of its local vault, receiving the snapshot and asking the broker to refresh on expiry. Sign-ins made from a Broker Client are uploaded to the broker, so accounts can be managed from any trusted omp host. This is how a trusted omp host consumes remote auth.
+
+### Gateway Client
+A consumer that holds only the Auth Gateway's token and sends every request through the gateway. It is the intended mode for credential-free sandboxes and foreign OpenAI-compatible tools; for omp itself it is a lesser mode, because omp's model list then comes from its own bundled catalog rather than the gateway's, and features that read credentials outside the inference path lose them.
+
+### Service Host
+The machine whose service manager runs the Auth Broker and Auth Gateway. By default it is the machine holding the production checkout; when it is a separate always-on machine, each Promotion is followed by a deploy that moves the Service Host's checkout and native addon to the promoted commit before the services restart, and the broker stays reachable only through a tunnel.
+
 ## Download Safety
 
 ### Workspace Containment
