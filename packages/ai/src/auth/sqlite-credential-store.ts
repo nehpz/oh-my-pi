@@ -22,6 +22,7 @@ import type { AuthCredentialStore, CredentialRefreshLeaseFence } from "./store";
 import type {
 	AuthCredential,
 	DisabledCredentialSummary,
+	OAuthAccountIdentity,
 	OAuthCredential,
 	StoredAuthCredential,
 	StoredCredentialBlock,
@@ -226,6 +227,32 @@ function resolveProviderCredentialIdentityKey(provider: string, identifiers: str
 export function resolveCredentialIdentityKey(provider: string, credential: AuthCredential): string | null {
 	if (credential.type === "api_key") return null;
 	return resolveProviderCredentialIdentityKey(provider, extractOAuthCredentialIdentifiers(credential));
+}
+
+/**
+ * Identity an account policy selector matches against. Stored fields win; a
+ * credential that stores no `email`/`accountId` (Cursor keeps only tokens)
+ * takes them from its token claims, the same claims its identity key uses.
+ */
+export function resolveOAuthPolicyIdentity(credential: OAuthCredential): OAuthAccountIdentity {
+	// Identity fields only: callers keep this around for display, so tokens must not ride along.
+	const identity: OAuthAccountIdentity = {
+		email: credential.email,
+		accountId: credential.accountId,
+		projectId: credential.projectId,
+		orgId: credential.orgId,
+		orgName: credential.orgName,
+	};
+	if (identity.email && identity.accountId) return identity;
+	const tokenIdentifiers = [
+		...(extractOAuthTokenIdentifiers(credential.access) ?? []),
+		...(extractOAuthTokenIdentifiers(credential.refresh) ?? []),
+	];
+	const fromToken = (prefix: string) =>
+		tokenIdentifiers.find(identifier => identifier.startsWith(prefix))?.slice(prefix.length);
+	identity.email ??= fromToken("email:");
+	identity.accountId ??= fromToken("account:");
+	return identity;
 }
 
 function resolveRowCredentialIdentityKey(provider: string, row: AuthRow): string | null {
