@@ -2,6 +2,7 @@ import { describe, expect, it } from "bun:test";
 import * as path from "node:path";
 import { stripVTControlCharacters } from "node:util";
 import type { UsageReport } from "@oh-my-pi/pi-ai";
+import { AuthStorage, SqliteAuthCredentialStore } from "@oh-my-pi/pi-ai/auth-storage";
 import { TempDir } from "@oh-my-pi/pi-utils";
 import {
 	buildRedactionMap,
@@ -11,6 +12,7 @@ import {
 	type UsagePolicyDiagnosticsOptions,
 } from "@oh-my-pi/pi-coding-agent/cli/usage-cli";
 import {
+	collectStoredAccounts,
 	collectUnreportedAccounts,
 	type UsageAccountIdentity,
 } from "@oh-my-pi/pi-coding-agent/slash-commands/helpers/usage-accounts";
@@ -537,6 +539,68 @@ describe("formatUsageBreakdown", () => {
 
 		expect(text).toContain("offline@example.test — no usage data");
 		expect(text).toContain("policy: priority -5 · reserve 40% (override) · reserve unknown");
+	});
+
+	it("matches token-only accounts to their policies the way routing does", async () => {
+		using tempDir = TempDir.createSync("@omp-usage-token-policy-");
+		const jwt = (sub: string) =>
+			`${Buffer.from('{"alg":"none"}').toString("base64url")}.${Buffer.from(JSON.stringify({ sub })).toString("base64url")}.sig`;
+		const store = await SqliteAuthCredentialStore.open(tempDir.join("agent.db"));
+		const storage = new AuthStorage(store, {
+			accountPolicies: [
+				{ provider: "cursor", account: { accountId: "auth0|user_primary" }, priority: 10 },
+				{ provider: "cursor", account: { accountId: "github|user_fallback" }, priority: 1 },
+			],
+		});
+		try {
+			const expires = Date.now() + HOUR;
+			// Cursor stores only tokens: the account id lives in the JWT subject.
+			await storage.credentials.set("cursor", [
+				{ type: "oauth", access: jwt("auth0|user_primary"), refresh: "refresh-primary", expires },
+				{ type: "oauth", access: jwt("github|user_fallback"), refresh: "refresh-fallback", expires },
+			]);
+			const policyOptions: UsagePolicyDiagnosticsOptions = {
+				globalReservePct: 10,
+				getAccountPolicy: (provider, identity) => storage.oauth.policy(provider, identity),
+			};
+			const accounts = collectStoredAccounts(storage);
+
+			// Reported: each report carries the subject as accountId, as the Cursor usage provider emits.
+			const reportFor = (email: string, accountId: string, usedFraction: number): UsageReport => ({
+				provider: "cursor",
+				fetchedAt: Date.now(),
+				limits: [makeLimit({ id: "monthly", provider: "cursor", usedFraction, windowId: "monthly" })],
+				metadata: { email, accountId },
+			});
+			const reported = stripVTControlCharacters(
+				formatUsageBreakdown(
+					[
+						reportFor("work@example.test", "auth0|user_primary", 0.25),
+						reportFor("personal@example.test", "github|user_fallback", 0.5),
+					],
+					accounts,
+					Date.now(),
+					undefined,
+					[],
+					policyOptions,
+				),
+			);
+			expect(reported.slice(reported.indexOf("work@example.test"))).toContain(
+				"policy: priority 10 · reserve 10% (global) · eligible · 75.0% left",
+			);
+			expect(reported.slice(reported.indexOf("personal@example.test"))).toContain(
+				"policy: priority 1 · reserve 10% (global) · eligible · 50.0% left",
+			);
+
+			// No reports (every fetch failed): stored-account rows still show each account's policy.
+			const unreported = stripVTControlCharacters(
+				formatUsageBreakdown([], accounts, Date.now(), undefined, [], policyOptions),
+			);
+			expect(unreported).toContain("policy: priority 10 · reserve 10% (global) · reserve unknown");
+			expect(unreported).toContain("policy: priority 1 · reserve 10% (global) · reserve unknown");
+		} finally {
+			storage.close();
+		}
 	});
 
 	it("shows the live Codex plan without exposing an ID for one account", () => {

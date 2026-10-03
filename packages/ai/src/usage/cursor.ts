@@ -1,7 +1,7 @@
 import { quotaTierFor } from "@oh-my-pi/pi-catalog/compat/behavior";
 import { CURSOR_DEFAULT_BASE_URL } from "@oh-my-pi/pi-catalog/wire/cursor";
 import { toNumber } from "@oh-my-pi/pi-catalog/utils";
-import { extractCursorAccessTokenUserId } from "../registry/oauth/cursor";
+import { extractCursorAccessTokenSubject, extractCursorAccessTokenUserId } from "../registry/oauth/cursor";
 import type {
 	CredentialRankingContext,
 	CredentialRankingStrategy,
@@ -500,9 +500,13 @@ export const cursorUsageProvider: UsageProvider = {
 		if (!report) return null;
 
 		const email = profileEmail ?? credential.email?.trim();
+		// Cursor credentials store no accountId; the token subject is the account id
+		// account policies match, so `omp usage` can attribute this report to a policy.
+		const accountId =
+			credential.accountId ?? (credential.type === "oauth" ? extractCursorAccessTokenSubject(token) : undefined);
 		const metadata = {
 			...(email ? { email } : {}),
-			...(credential.accountId ? { accountId: credential.accountId } : {}),
+			...(accountId ? { accountId } : {}),
 			...(credential.projectId ? { projectId: credential.projectId } : {}),
 		};
 		if (Object.keys(metadata).length > 0) report.metadata = metadata;
