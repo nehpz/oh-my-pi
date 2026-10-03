@@ -753,7 +753,10 @@ async function handleCredentialsCheck(storage: AuthStorage, signal: AbortSignal)
  * `rerank`, `video`) so clients can keep them off chat routes; absent means chat.
  * `max_tokens` mirrors `max_output_tokens` under the fallback name our own
  * generic `openai-models-list` discovery client checks (see
- * `packages/coding-agent/src/config/model-discovery.ts`).
+ * `packages/coding-agent/src/config/model-discovery.ts`). `display_name` ends
+ * in the provider id (`Claude Opus 5.5 (devin)`): the same model is often
+ * served by several providers, and clients that list by name would otherwise
+ * show identical rows.
  */
 interface ModelListRow {
 	id: string;
@@ -781,7 +784,7 @@ function handleModelsList(opts: AuthGatewayRouteOptions): Response {
 			object: "model",
 			owned_by: model.provider,
 			api: model.api,
-			display_name: model.name,
+			display_name: `${model.name} (${model.provider})`,
 			context_length: model.contextWindow ?? null,
 			max_tokens: model.maxTokens ?? null,
 			input_modalities: model.input,
