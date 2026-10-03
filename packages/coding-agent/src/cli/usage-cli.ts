@@ -563,14 +563,17 @@ function metadataIdentity(report: UsageReport): OAuthAccountIdentity {
 	};
 }
 
+/** Identity to match against account policies: the stored account's policy identity, same as routing uses. */
 function accountOAuthIdentity(account: UsageAccountIdentity): OAuthAccountIdentity {
-	return {
-		email: account.email,
-		accountId: account.accountId,
-		projectId: account.projectId,
-		orgId: account.orgId,
-		orgName: account.orgName,
-	};
+	return (
+		account.policyIdentity ?? {
+			email: account.email,
+			accountId: account.accountId,
+			projectId: account.projectId,
+			orgId: account.orgId,
+			orgName: account.orgName,
+		}
+	);
 }
 
 function policyEnabledProviders(
