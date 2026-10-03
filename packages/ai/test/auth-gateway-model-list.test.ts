@@ -6,7 +6,7 @@ import { startAuthGateway } from "@oh-my-pi/pi-ai/auth-gateway";
 import { AuthStorage } from "@oh-my-pi/pi-ai/auth-storage";
 import { createMockModel } from "@oh-my-pi/pi-ai/providers/mock";
 
-test("model listing exposes one provider-qualified route per upstream model", async () => {
+test("model listing exposes one provider-qualified route per upstream model, named by provider", async () => {
 	const dir = await fs.mkdtemp(path.join(os.tmpdir(), "gw-model-list-"));
 	const storage = await AuthStorage.create(path.join(dir, "auth.db"));
 	const anthropic = createMockModel({ provider: "anthropic", id: "shared-model" });
@@ -31,7 +31,7 @@ test("model listing exposes one provider-qualified route per upstream model", as
 					object: "model",
 					owned_by: "anthropic",
 					api: "mock",
-					display_name: "shared-model",
+					display_name: "shared-model (anthropic)",
 					context_length: 200_000,
 					max_output_tokens: 32_768,
 					max_tokens: 32_768,
@@ -42,7 +42,7 @@ test("model listing exposes one provider-qualified route per upstream model", as
 					object: "model",
 					owned_by: "devin",
 					api: "mock",
-					display_name: "shared-model",
+					display_name: "shared-model (devin)",
 					context_length: 200_000,
 					max_output_tokens: 32_768,
 					max_tokens: 32_768,
