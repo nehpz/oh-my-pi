@@ -808,7 +808,8 @@ describe("cursor usage provider", () => {
 				{ fetch: mockFetch },
 			);
 
-			expect(report?.metadata).toEqual({ email: "stored@example.com" });
+			// The token subject attributes the report to its account for policy matching.
+			expect(report?.metadata).toEqual({ email: "stored@example.com", accountId: "auth0|user_123" });
 		});
 
 		it("returns legacy usage when the personal summary request fails", async () => {
@@ -848,7 +849,7 @@ describe("cursor usage provider", () => {
 			]);
 			expect(report?.limits.map(limit => limit.id)).toEqual(["cursor:requests:gpt-4"]);
 			expect(report?.raw).toEqual(authUsagePayload);
-			expect(report?.metadata).toEqual({ email: "fallback@example.com" });
+			expect(report?.metadata).toEqual({ email: "fallback@example.com", accountId: "auth0|user_789" });
 		});
 
 		it("does not send the session cookie outside the default Cursor origin", async () => {
