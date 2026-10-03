@@ -1,4 +1,9 @@
-import type { AuthStorage, UsageReport } from "@oh-my-pi/pi-ai";
+import {
+	type AuthStorage,
+	type OAuthAccountIdentity,
+	resolveOAuthPolicyIdentity,
+	type UsageReport,
+} from "@oh-my-pi/pi-ai";
 
 /** Identity slice of a stored credential, for "every account" coverage. */
 export interface UsageAccountIdentity {
@@ -13,6 +18,12 @@ export interface UsageAccountIdentity {
 	orgName?: string;
 	/** Epoch ms of the interactive login that minted the OAuth grant (see `OAuthCredentials.authorizedAt`). */
 	authorizedAt?: number;
+	/**
+	 * Identity account policies match: stored fields, else token claims. Kept
+	 * apart from the display fields so token-only credentials (Cursor) keep their
+	 * existing attribution and labels.
+	 */
+	policyIdentity?: OAuthAccountIdentity;
 }
 
 /** Flatten every stored credential (OAuth and API key) into identity rows for unreported-account detection. */
@@ -34,6 +45,7 @@ export function collectStoredAccounts(authStorage: AuthStorage): UsageAccountIde
 					orgId: credential.orgId,
 					orgName: credential.orgName,
 					authorizedAt: credential.authorizedAt,
+					policyIdentity: resolveOAuthPolicyIdentity(credential),
 				});
 			} else {
 				accounts.push({ provider, type: "api_key" });
