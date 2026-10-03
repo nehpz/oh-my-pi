@@ -22,9 +22,11 @@ import { LEAF_TARGETS } from "../packages/natives/scripts/gen-npm-packages.ts";
 
 export const UPSTREAM_URL = "https://github.com/can1357/oh-my-pi.git";
 const SERVICE_LABELS = ["com.omp.auth-broker", "com.omp.auth-gateway"] as const;
-const GATEWAY_MODELS_URL = "http://127.0.0.1:4000/v1/models";
+// A remote service host keeps its broker on loopback; this machine reaches it through its SSH tunnel on the same port.
 const BROKER_HEALTH_URL = "http://127.0.0.1:8765/v1/healthz";
-const GATEWAY_HEALTH_URL = "http://127.0.0.1:4000/healthz";
+const LOCAL_GATEWAY_URL = "http://127.0.0.1:4000";
+// Non-interactive ssh shells skip the profile that puts bun on PATH.
+const SERVICE_PATH_PREFIX = 'export PATH="$HOME/.bun/bin:/opt/homebrew/bin:/usr/local/bin:$PATH"';
 
 const repoRoot = path.resolve(import.meta.dir, "..");
 const worktreePath = path.resolve(repoRoot, "../oh-my-pi-sync");
@@ -48,8 +50,11 @@ export type NativeMode = "auto" | "npm" | "bazel";
 export type ResolvedNativeMode = Exclude<NativeMode, "auto">;
 
 export interface SyncOptions {
+	/** Commit-ish `deploy` sends to the service host; HEAD when omitted. */
+	deployRef?: string;
 	version?: string;
 	status: boolean;
+	deploy: boolean;
 	dryRun: boolean;
 	verifyOnly: boolean;
 	acceptManualReview: boolean;
@@ -59,15 +64,18 @@ export interface SyncOptions {
 
 export function parseArgs(args: readonly string[]): SyncOptions {
 	let status = false;
+	let deploy = false;
 	let dryRun = false;
 	let verifyOnly = false;
 	let acceptManualReview = false;
 	let help = false;
 	let version: string | undefined;
+	let deployRef: string | undefined;
 	let nativeMode: NativeMode = "auto";
 
 	for (const arg of args) {
 		if (arg === "status") status = true;
+		else if (arg === "deploy") deploy = true;
 		else if (arg === "--dry-run") dryRun = true;
 		else if (arg === "--verify-only") verifyOnly = true;
 		else if (arg === "--accept-manual-review") acceptManualReview = true;
@@ -78,14 +86,24 @@ export function parseArgs(args: readonly string[]): SyncOptions {
 			nativeMode = value;
 		} else if (arg.startsWith("-")) throw new Error(`unknown flag: ${arg}`);
 		else {
-			if (version !== undefined) throw new Error(`unexpected positional argument: ${arg}`);
-			version = normalizeVersion(arg);
+			if (version !== undefined || deployRef !== undefined) {
+				throw new Error(`unexpected positional argument: ${arg}`);
+			}
+			// `deploy` takes a git ref (e.g. fork/pre-vX.Y.Z), not a release version.
+			if (deploy) deployRef = arg;
+			else version = normalizeVersion(arg);
 		}
 	}
-	if (status && (version !== undefined || dryRun || verifyOnly || acceptManualReview || nativeMode !== "auto")) {
+	if (
+		status &&
+		(deploy || version !== undefined || dryRun || verifyOnly || acceptManualReview || nativeMode !== "auto")
+	) {
 		throw new Error("status command does not accept a version or sync flags");
 	}
-	return { version, status, dryRun, verifyOnly, acceptManualReview, help, nativeMode };
+	if (deploy && (version !== undefined || verifyOnly || acceptManualReview || nativeMode !== "auto")) {
+		throw new Error("deploy command accepts only a git ref and --dry-run");
+	}
+	return { version, deployRef, status, deploy, dryRun, verifyOnly, acceptManualReview, help, nativeMode };
 }
 
 export const upstreamTag = (v: string) => `upstream/${v}`;
@@ -559,10 +577,12 @@ async function snapshot(version: string): Promise<void> {
 		.nothrow();
 	if (exists.exitCode === 0) {
 		console.log(`rollback tag ${tag} already exists (resuming); leaving it in place`);
-		return;
+	} else {
+		await git(["tag", tag, "main"]).quiet();
+		console.log(`tagged rollback point ${tag}`);
 	}
-	await git(["tag", tag, "main"]).quiet();
-	console.log(`tagged rollback point ${tag}`);
+	// The next force-push drops this commit from origin's main; the tag keeps it fetchable for a service host rollback.
+	await git(["push", "--quiet", "origin", `refs/tags/${tag}`]).quiet();
 }
 
 async function worktreeExists(): Promise<boolean> {
@@ -1477,19 +1497,129 @@ export async function verifyGatewayModels(url: string, token: string, timeoutMs 
 	return data.length;
 }
 
-async function bounceServices(version: string): Promise<void> {
+export interface ServiceHost {
+	/** SSH destination; undefined when the services run on this machine. */
+	ssh?: string;
+	/** Checkout the services exec from: absolute, or relative to the host's $HOME. */
+	repoDir: string;
+	gatewayUrl: string;
+}
+
+/** Where the launchd services run, from git config `omp-sync.serviceHost` / `omp-sync.serviceRepoDir`. */
+export function resolveServiceHost(
+	destination: string,
+	remoteRepoDir: string,
+	localRoot: string = repoRoot,
+	home: string = os.homedir(),
+): ServiceHost {
+	if (!destination) return { repoDir: localRoot, gatewayUrl: LOCAL_GATEWAY_URL };
+	return {
+		ssh: destination,
+		repoDir: remoteRepoDir || path.relative(home, localRoot),
+		gatewayUrl: `http://${destination.slice(destination.lastIndexOf("@") + 1)}:4000`,
+	};
+}
+
+async function readServiceHost(): Promise<ServiceHost> {
+	const [host, repoDir] = await Promise.all(
+		["omp-sync.serviceHost", "omp-sync.serviceRepoDir"].map(async key =>
+			(await git(["config", "--get", key]).quiet().nothrow()).text().trim(),
+		),
+	);
+	return resolveServiceHost(host ?? "", repoDir ?? "");
+}
+
+/** Run `script` under bash in the service host's checkout; `$1`… are `args`. */
+async function runOnServiceHost(target: ServiceHost, script: string, args: readonly string[] = []): Promise<string> {
+	const body = [
+		"set -euo pipefail",
+		SERVICE_PATH_PREFIX,
+		'dir=$1; shift; case "$dir" in /*) ;; *) dir="$HOME/$dir" ;; esac; cd "$dir"',
+		script,
+	].join("\n");
+	const argv = ["bash", "-s", "--", target.repoDir, ...args];
+	const stdin = new Response(body);
+	// ssh joins its arguments into one remote shell command line, so quote each one.
+	const remoteCommand = argv.map(arg => `'${arg.replaceAll("'", `'\\''`)}'`).join(" ");
+	const result = target.ssh
+		? await $`ssh -o BatchMode=yes ${target.ssh} ${remoteCommand} < ${stdin}`.quiet().nothrow()
+		: await $`${argv} < ${stdin}`.quiet().nothrow();
+	if (result.exitCode !== 0) {
+		const where = target.ssh ?? "local";
+		throw new Error(`${where} command failed (exit ${result.exitCode}): ${result.stderr.toString().trim()}`);
+	}
+	return result.stdout.toString();
+}
+
+// Every step that can fail (fetch, copying the addon onto the checkout's filesystem) runs before
+// the checkout changes; the addon swap itself is same-filesystem renames that replace files in place.
+const DEPLOY_CHECKOUT_SCRIPT = `sha=$1 stage=$2 native=$3
+trap 'rm -rf "$stage"' EXIT
+lock="$native/.deploy-lock"
+mkdir "$lock" 2>/dev/null || { echo "another deploy holds $lock (remove it if no deploy is running)" >&2; exit 1; }
+trap 'rm -rf "$stage" "$lock"' EXIT
+git fetch --quiet --tags origin
+git cat-file -e "$sha^{commit}" 2>/dev/null || { echo "commit $sha is not on origin; push it first" >&2; exit 1; }
+shopt -s nullglob
+staged=("$stage"/*.node)
+[ \${#staged[@]} -gt 0 ] || { echo "no native addon staged in $stage" >&2; exit 1; }
+incoming="$native/.incoming"
+rm -rf "$incoming"
+mkdir -p "$incoming"
+cp "\${staged[@]}" "$incoming"/
+git reset --quiet --hard "$sha"
+keep=" "
+for f in "$incoming"/*.node; do keep+="\${f##*/} "; mv -f "$f" "$native"/; done
+rmdir "$incoming"
+for f in "$native"/*.node; do case "$keep" in *" \${f##*/} "*) ;; *) rm -f "$f" ;; esac; done
+bun install --frozen-lockfile`;
+
+/** Move a remote service host's checkout to `sha` with the native addon set found under `addonRoot`. */
+async function syncServiceCheckout(target: ServiceHost, sha: string, addonRoot: string): Promise<void> {
+	const addons = await nativeAddonFiles(addonRoot);
+	if (addons.length === 0) {
+		throw new Error(`no native addon in ${path.resolve(addonRoot, NATIVE_RELATIVE_DIR)} to deploy`);
+	}
+	const stage = (await runOnServiceHost(target, "mktemp -d /tmp/omp-sync-native.XXXXXX")).trim();
+	const files = addons.map(name => path.resolve(addonRoot, NATIVE_RELATIVE_DIR, name));
+	const scp = await $`scp -q -o BatchMode=yes ${files} ${`${target.ssh}:${stage}/`}`.quiet().nothrow();
+	if (scp.exitCode !== 0) {
+		await runOnServiceHost(target, 'rm -rf "$1"', [stage]).catch(() => {});
+		throw new Error(`scp to ${target.ssh} failed: ${scp.stderr.toString().trim()}`);
+	}
+	await runOnServiceHost(target, DEPLOY_CHECKOUT_SCRIPT, [sha, stage, NATIVE_RELATIVE_DIR]);
+}
+
+const KICKSTART_SCRIPT = 'launchctl kickstart -k "gui/$(id -u)/$1"';
+
+/**
+ * Restart the services (deploying to a remote service host first). `deploy` pins an explicit
+ * `deploy` command's commit and addon; without it the sync's promoted HEAD and this checkout's addon ship.
+ */
+async function bounceServices(version: string, deploy?: { sha: string; addonRoot: string }): Promise<void> {
 	const bare = normalizeVersion(version).slice(1);
-	const uid = process.getuid?.() ?? Number((await $`id -u`.quiet()).text().trim());
-	let stage = "broker restart/readiness";
+	const target = await readServiceHost();
+	let stage = "service host checkout";
 	try {
+		if (target.ssh) {
+			const deploySha = deploy?.sha ?? (await git(["rev-parse", "HEAD"]).quiet()).text().trim();
+			console.log(`deploying ${deploySha.slice(0, 9)} to ${target.ssh}:${target.repoDir}...`);
+			await syncServiceCheckout(target, deploySha, deploy?.addonRoot ?? repoRoot);
+		}
+
+		stage = "broker restart/readiness";
 		console.log(`restarting ${SERVICE_LABELS[0]}...`);
-		await $`launchctl kickstart -k gui/${uid}/${SERVICE_LABELS[0]}`.quiet();
-		await waitForServiceHealth(SERVICE_LABELS[0], BROKER_HEALTH_URL, bare);
+		await runOnServiceHost(target, KICKSTART_SCRIPT, [SERVICE_LABELS[0]]);
+		await waitForServiceHealth(
+			target.ssh ? `${SERVICE_LABELS[0]} (via SSH tunnel)` : SERVICE_LABELS[0],
+			BROKER_HEALTH_URL,
+			bare,
+		);
 
 		stage = "gateway restart/readiness";
 		console.log(`restarting ${SERVICE_LABELS[1]}...`);
-		await $`launchctl kickstart -k gui/${uid}/${SERVICE_LABELS[1]}`.quiet();
-		await waitForServiceHealth(SERVICE_LABELS[1], GATEWAY_HEALTH_URL, bare);
+		await runOnServiceHost(target, KICKSTART_SCRIPT, [SERVICE_LABELS[1]]);
+		await waitForServiceHealth(SERVICE_LABELS[1], `${target.gatewayUrl}/healthz`, bare);
 
 		// Credential-level status is informational only: `check --strict` exits
 		// nonzero on account quota/probe issues unrelated to the sync.
@@ -1500,18 +1630,18 @@ async function bounceServices(version: string): Promise<void> {
 		console.log(check.text().split("\n").slice(-2).join("\n"));
 
 		stage = "token load";
-		const token = (await $`${path.resolve(repoRoot, "packages/coding-agent/scripts/omp")} auth-gateway token`.quiet())
-			.text()
-			.trim();
+		const token = (await runOnServiceHost(target, "packages/coding-agent/scripts/omp auth-gateway token")).trim();
 
 		stage = "/v1/models check";
-		const count = await verifyGatewayModels(GATEWAY_MODELS_URL, token);
+		const count = await verifyGatewayModels(`${target.gatewayUrl}/v1/models`, token);
 		console.log(`services healthy: ${count} model(s), unique ids, context_length present`);
 	} catch (err) {
-		throw new Error(
-			`Upgrade to ${version} completed; post-promotion ${stage} failed: ${err instanceof Error ? err.message : String(err)}. Resume with \`bun scripts/sync-upstream.ts ${version}\`; roll back only if the promoted code is confirmed broken.`,
-			{ cause: err },
-		);
+		const detail = err instanceof Error ? err.message : String(err);
+		// A rollback deploy leaves this checkout on the broken HEAD, so its retry must keep the deployed commit.
+		const message = deploy
+			? `Deploy of ${deploy.sha.slice(0, 9)} (${version}) failed at ${stage}: ${detail}. Retry with \`bun scripts/sync-upstream.ts deploy ${deploy.sha}\`.`
+			: `Upgrade to ${version} completed; post-promotion ${stage} failed: ${detail}. Resume with \`bun scripts/sync-upstream.ts ${version}\`; roll back only if the promoted code is confirmed broken.`;
+		throw new Error(message, { cause: err });
 	}
 }
 
@@ -1627,7 +1757,7 @@ async function cmdSync(
 		}
 		console.log(`  7. promote: exact confirmation then push --force-with-lease; bun install`);
 		console.log(
-			`  8. services: kickstart ${SERVICE_LABELS.join(", ")}; wait for broker+gateway /healthz reporting ${version}; /v1/models shape`,
+			`  8. services: deploy to git config omp-sync.serviceHost when set; kickstart ${SERVICE_LABELS.join(", ")}; wait for broker+gateway /healthz reporting ${version}; /v1/models shape`,
 		);
 		console.log("  9. sync log: append entry to docs/fork-maintenance.md, commit, push");
 		return;
@@ -1747,6 +1877,45 @@ async function cmdSync(
 	console.log(`sync to ${version} complete`);
 }
 
+async function cmdDeploy(ref: string | undefined, dryRun: boolean): Promise<void> {
+	const sha = (await git(["rev-parse", "--verify", `${ref ?? "HEAD"}^{commit}`]).quiet()).text().trim();
+	const head = (await git(["rev-parse", "HEAD"]).quiet()).text().trim();
+	const pkg = JSON.parse((await git(["show", `${sha}:packages/coding-agent/package.json`]).quiet()).text()) as {
+		version: string;
+	};
+	const version = normalizeVersion(pkg.version);
+	const target = await readServiceHost();
+	if (sha !== head && !target.ssh) {
+		throw new Error("deploying a ref other than HEAD needs git config omp-sync.serviceHost; local services run HEAD");
+	}
+	// HEAD ships this checkout's verified addon; any other commit (a rollback) gets its own release's npm addon.
+	const addonSource = sha === head ? "this checkout's native addon" : `npm native addon ${version}`;
+	if (dryRun) {
+		console.log(`dry run — deploy ${version} (${sha.slice(0, 9)}):`);
+		if (target.ssh) {
+			console.log(
+				`  1. scp ${addonSource}; ssh ${target.ssh}: fetch, reset ${target.repoDir} to ${sha.slice(0, 9)}, bun install`,
+			);
+		} else {
+			console.log("  1. services run on this machine (git config omp-sync.serviceHost unset); no checkout sync");
+		}
+		console.log(`  2. kickstart ${SERVICE_LABELS[0]}; wait for ${BROKER_HEALTH_URL} reporting ${version}`);
+		console.log(`  3. kickstart ${SERVICE_LABELS[1]}; wait for ${target.gatewayUrl}/healthz; check /v1/models shape`);
+		return;
+	}
+	if (sha === head) {
+		await bounceServices(version, { sha, addonRoot: repoRoot });
+		return;
+	}
+	const { sourceRoot } = await acquireNpmNativeAddon(version);
+	if (!sourceRoot) throw new Error(`npm native acquisition for ${version} produced no addon`);
+	try {
+		await bounceServices(version, { sha, addonRoot: sourceRoot });
+	} finally {
+		await fs.rm(sourceRoot, { recursive: true, force: true });
+	}
+}
+
 // =============================================================================
 // Main
 // =============================================================================
@@ -1764,12 +1933,14 @@ if (import.meta.main) {
 			await editRebaseTodo(args.slice(1));
 		} else {
 			const opts = parseArgs(args);
-			if (opts.help || (!opts.status && !opts.version)) {
+			if (opts.help || (!opts.status && !opts.deploy && !opts.version)) {
 				console.log(
-					"usage: bun scripts/sync-upstream.ts <status | version [--dry-run] [--verify-only] [--accept-manual-review] [--native-mode=auto|npm|bazel]>",
+					"usage: bun scripts/sync-upstream.ts <status | deploy [<git-ref>] [--dry-run] | version [--dry-run] [--verify-only] [--accept-manual-review] [--native-mode=auto|npm|bazel]>",
 				);
 			} else if (opts.status) {
 				await cmdStatus();
+			} else if (opts.deploy) {
+				await cmdDeploy(opts.deployRef, opts.dryRun);
 			} else if (opts.version) {
 				await cmdSync(opts.version, opts.dryRun, opts.verifyOnly, opts.nativeMode, opts.acceptManualReview);
 			}
