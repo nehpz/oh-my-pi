@@ -56,6 +56,7 @@ export {
 	isSqliteBusyError,
 	isSqliteCorruptionError,
 	resolveCredentialIdentityKey,
+	resolveOAuthPolicyIdentity,
 	SqliteAuthCredentialStore,
 } from "./auth/sqlite-credential-store";
 export * from "./auth/store";
