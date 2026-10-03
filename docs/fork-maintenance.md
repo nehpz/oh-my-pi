@@ -344,13 +344,24 @@ Load with `launchctl bootstrap gui/$(id -u) <plist>` (auto-login keeps the gui d
    omp auth-broker migrate --from-local --include-oauth
    ```
    Then rerun `bun scripts/sync-upstream.ts deploy` (or start a laptop omp session) to confirm the model list is back.
+
+   `migrate` moves credentials only. `omp stats` subscription-window charts read `usage_history` from the broker once one is configured, so append the laptop's history to the mini (rows keep their `recorded_at`/`resets_at`; only `id` is renumbered, and every reader orders by `recorded_at`). Extract the table alone so the laptop's credentials never leave it, back up the mini DB, then insert only rows older than the mini's first row — re-running inserts nothing:
+   ```bash
+   sqlite3 /tmp/uh.db "ATTACH 'file:$HOME/.omp/agent/agent.db?mode=ro' AS src; CREATE TABLE usage_history AS SELECT recorded_at, provider, account_key, email, account_id, limit_id, label, window_label, used_fraction, status, resets_at FROM src.usage_history"
+   scp /tmp/uh.db stephen@10.0.0.98:/tmp/uh.db
+   ssh stephen@10.0.0.98 'cd ~/.omp/agent && sqlite3 agent.db ".backup agent.db.pre-usage-backfill" && sqlite3 agent.db "ATTACH \"/tmp/uh.db\" AS l; INSERT INTO usage_history (recorded_at, provider, account_key, email, account_id, limit_id, label, window_label, used_fraction, status, resets_at) SELECT recorded_at, provider, account_key, email, account_id, limit_id, label, window_label, used_fraction, status, resets_at FROM l.usage_history WHERE recorded_at < (SELECT min(recorded_at) FROM main.usage_history) ORDER BY recorded_at" && rm /tmp/uh.db'
+   ```
+   Check a backup with `sqlite3 "file:<backup>?immutable=1" "pragma integrity_check"`; a plain `-readonly` open fails on a WAL-mode copy without its `-shm` file.
 7. Point other hosts / OpenAI-compatible harnesses at `http://10.0.0.98:4000/v1` with the mini's gateway token (`packages/coding-agent/scripts/omp auth-gateway token`, run on the mini).
 
 ### Credential management under a remote broker
 
-- `/login` inside a laptop omp session writes the credential to the mini broker (`POST /v1/credential` through the tunnel) — the normal path for adding or re-authorizing accounts.
+- `/login` inside a laptop omp session, or `omp login <provider>` on the laptop, writes the credential to the mini broker (`POST /v1/credential` through the tunnel; the CLI prints `Credentials saved to auth broker …`) — the normal path for adding or re-authorizing accounts.
+- **Not** `omp auth-broker login <provider>` on the laptop: without `--via`, `auth-broker login` and `auth-broker logout` always open the local `agent.db`, which nothing reads after cutover. The credential silently lands in the dead laptop vault.
+- Logout and disable go through the mini: the laptop's broker-backed store rejects deletes by design. Run `~/Projects/nehpz/oh-my-pi/packages/coding-agent/scripts/omp auth-broker logout <provider>` over ssh.
 - `omp auth-broker login <provider> --via=stephen@10.0.0.98` runs a bare `omp` on the mini over a non-interactive ssh shell, so `omp` and `bun` (the launcher execs `bun`) must be on that shell's PATH. Without sudo: `ln -s ~/Projects/nehpz/oh-my-pi/packages/coding-agent/scripts/omp ~/.bun/bin/omp && echo 'export PATH="$HOME/.bun/bin:$PATH"' >> ~/.zshenv` on the mini (zsh reads `~/.zshenv` for ssh commands too). Prefer `/login`.
 - On the mini, run the checkout launcher (`~/Projects/nehpz/oh-my-pi/packages/coding-agent/scripts/omp`): `auth-broker login|logout` write the mini's local DB directly; `auth-broker import` uploads through the configured broker, so the mini's broker must be running.
+- New credentials need no restart: the gateway checks the broker for credential changes every 10 seconds and refreshes its catalog when they change. `omp models refresh` on the laptop refreshes only the laptop's own catalog cache.
 
 ## Patch-authoring rules
 
