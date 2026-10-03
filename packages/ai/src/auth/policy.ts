@@ -1,5 +1,6 @@
 import { logger } from "@oh-my-pi/pi-utils";
 import * as AIError from "../error";
+import { resolveOAuthPolicyIdentity } from "./sqlite-credential-store";
 import type {
 	AuthAccountPolicies,
 	AuthAccountPolicy,
@@ -140,7 +141,12 @@ export class AccountPolicies {
 		for (const { policy, index } of policies) {
 			const matches: number[] = [];
 			for (let credentialIndex = 0; credentialIndex < oauthCredentials.length; credentialIndex += 1) {
-				if (matchesAuthAccountSelector(policy.account, oauthCredentials[credentialIndex]!)) {
+				if (
+					matchesAuthAccountSelector(
+						policy.account,
+						resolveOAuthPolicyIdentity(oauthCredentials[credentialIndex]!),
+					)
+				) {
 					matches.push(credentialIndex);
 				}
 			}
@@ -180,8 +186,8 @@ export class AccountPolicies {
 		);
 	}
 
-	/** Return the configured policy for a stored OAuth credential. */
+	/** Return the configured policy for a stored OAuth credential, matched on its stored or token-derived identity. */
 	forCredential(provider: string, credential: AuthCredential): AuthAccountPolicy | undefined {
-		return credential.type === "oauth" ? this.find(provider, credential) : undefined;
+		return credential.type === "oauth" ? this.find(provider, resolveOAuthPolicyIdentity(credential)) : undefined;
 	}
 }
