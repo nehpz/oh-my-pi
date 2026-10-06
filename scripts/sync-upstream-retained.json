@@ -13,5 +13,10 @@
     "subject": "chore(deps): pin Bun package manager to v1.4.2",
     "reason": "accepted via --accept-manual-review",
     "date": "2026-09-15"
+  },
+  "1d88a655bc9fff916165d5bd9708ac52e400751e": {
+    "subject": "fix(builtins): gate cp clone_unsupported to platforms that read it",
+    "reason": "accepted via --accept-manual-review",
+    "date": "2026-10-06"
   }
 }
