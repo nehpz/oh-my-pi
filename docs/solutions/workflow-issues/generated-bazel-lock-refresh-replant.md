@@ -77,7 +77,7 @@ If the rebase stops, calculate the conflicted and remaining Patches from the ret
 
 ### Regenerate after replanting
 
-After the rebase succeeds, `prepareWorktree` runs `bun install` and `bun run build:native`, removes the Bazel workspace convenience symlink, and requires a clean tracked worktree. The target snapshot and current source tree therefore produce the final lock; no old release's generated lock is replayed.
+After the rebase succeeds, `prepareWorktree` runs `bun install --frozen-lockfile`, then either acquires the exact-version npm native addon or runs `scripts/bazel-natives.ts host` into an isolated output, removes the Bazel workspace convenience symlink, and requires a clean tracked worktree. The target snapshot and current source tree therefore produce the final lock; no old release's generated lock is replayed.
 
 Keep dry runs honest: report the retained Patch count separately and print each omitted Patch as `drop ... (generated lock refresh)`. Operators should see both the exact classifier decision and the regeneration step before a real sync.
 
