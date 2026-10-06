@@ -2,7 +2,7 @@
 title: Upstream Sync for History-Truncated Forks via Patch-Stack Replant
 module: fork-maintenance
 date: 2026-07-21
-last_refreshed: 2026-10-03
+last_refreshed: 2026-10-06
 problem_type: workflow_issue
 component: development_workflow
 severity: high
@@ -41,7 +41,7 @@ During the v17.0.7 release cycle of `can1357/oh-my-pi`, GitHub's "Sync fork" but
 fatal: refusing to merge unrelated histories
 ```
 
-Investigation revealed a structural change: upstream truncated its entire repository history. Upstream `main` and release tag `v17.0.7` are the same parentless orphan snapshot commit (`7b141199d` — upstream tag identity; `git show -s --format=%P` returns empty), sharing no lineage with the fork's `v17.0.6` base (`89d6a8f6d` — upstream v17.0.6 tag identity, historical: no longer reachable from the fork's replanted `main`, retained locally as tag `upstream/v17.0.6`). Merge-based synchronization is structurally impossible, for this and every future release published this way.
+Investigation revealed a structural change: upstream truncated its entire repository history. Upstream `main` and release tag `v17.0.7` are the same parentless orphan snapshot commit (`7b141199d` — upstream tag identity; `git show -s --format=%P` returns empty), sharing no lineage with the fork's `v17.0.6` base (`89d6a8f6d` — upstream v17.0.6 tag identity, mirrored locally as tag `upstream/v17.0.6`). Merge-based synchronization is structurally impossible, for this and every future release published this way.
 
 The fork sync process was migrated to a linear patch stack replanted onto upstream release snapshots via `git rebase --onto`.
 
@@ -99,7 +99,7 @@ git reset --hard <verified-sync-head>
 git push --force-with-lease origin main
 ```
 
-Before deleting the sync worktree, `promote()` stages its verified `.node` addon under a temporary name and atomically renames it into the live checkout. This prevents the ignored pre-sync addon from surviving the tracked-tree reset and prevents readers from observing a partially copied binary.
+`promote()` stages its verified `.node` addon under a temporary name outside the sync worktree before deleting the worktree, then atomically renames it into the live checkout after the tracked-tree reset. This prevents the ignored pre-sync addon from surviving the tracked-tree reset and prevents readers from observing a partially copied binary.
 
 #### Materializing test files for supersession checks
 
@@ -122,7 +122,7 @@ bun <worktree>/packages/coding-agent/src/cli.ts --smoke-test
 
 `prepareWorktree()` in `scripts/sync-upstream.ts` runs `bun install --frozen-lockfile`, then produces the exact-version addon for the target release and swaps it into the worktree before verification. Worktrees are reused when a sync resumes and their ignored `.node` files persist, so a same-version stale addon must never be allowed to pass verification and be promoted into the live checkout.
 
-The producer is the Native Preparation Mode. The default `auto` mode picks `npm`, which acquires the official `@oh-my-pi/pi-natives-<platform>` leaf for that version, unless a retained Patch touches the native build or packaging contract. In that case it picks `bazel`, which runs `scripts/bazel-natives.ts host`; only that path needs `bazelisk` (or `bazel`) on PATH, and first builds can take many minutes. `--native-mode=npm|bazel` overrides the choice; npm is refused when the classification requires Bazel.
+The producer is the Native Preparation Mode. The default `auto` mode picks `npm`, which acquires the official `@oh-my-pi/pi-natives-<platform>` leaf for that version, unless a retained Patch touches the native build or packaging contract. In that case it picks `bazel`, which runs `scripts/bazel-natives.ts host`; that host build defaults to the local Cargo/N-API path (Bazel only with `OMP_NATIVE_BUILD_BACKEND=bazel` or extra bazel args), and first builds can take many minutes. `--native-mode=npm|bazel` overrides the choice; npm is refused when the classification requires Bazel.
 
 #### Retiring generated Bazel lock refreshes
 
