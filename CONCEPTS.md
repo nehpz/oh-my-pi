@@ -5,10 +5,12 @@ Shared domain vocabulary for this project — entities, named processes, and sta
 ## Fork Maintenance
 
 ### Upstream Snapshot
-A release published by upstream as a single parentless commit carrying the whole tree and no history. Snapshots share no ancestry with each other or with the fork, which makes merging impossible and makes explicit base tags the only way to know what the fork is based on.
+An upstream release tag the fork's Patch Stack sits on. Upstream may publish a release as a single parentless commit with no ancestry shared with earlier releases or the fork, so merging is never the sync mechanism and an explicit base tag, not merge history, records what the fork is based on.
 
 ### Patch Stack
 The fork's entire delta from upstream, kept as a linear sequence of self-contained commits directly atop the current Upstream Snapshot. The stack is always inspectable as the commits between the current base and the fork's tip; it contains no merge commits.
+
+Every rewrite of the stack — a Replant, folding a fix into an existing Patch, a squash — happens off the production checkout and reaches the mainline as one explicit pointer move, only after the rewritten result is shown to have the intended tree. A rebase is never run in the production checkout itself.
 
 ### Patch
 One self-contained commit in the Patch Stack. A Patch carries its intent in its commit message (detailed enough to re-implement the change from the message alone) and owns the tests that prove its behavior — those tests double as its Supersession contract. Patches never edit upstream changelog files.
@@ -20,7 +22,7 @@ The sync operation: rebasing the Patch Stack from the old Upstream Snapshot onto
 The disposable, sync-owned checkout a Replant runs in, separate from the production checkout. It exists only between the start of a Replant and Promotion; the sync owns its entire lifecycle and may destroy it at any time, so nothing durable belongs inside it. A directory left at its path that git no longer registers as a worktree is a stale remnant — cleared automatically before the next Replant unless it contains a `.git` entry, in which case the sync stops rather than risk deleting a real checkout. Long-lived tool sessions must not keep their working directory inside it: they recreate runtime state there after removal, which is what produces stale remnants.
 
 ### Promotion
-Moving the fork's mainline to the verified replanted head and force-pushing it. Promotion cannot be a fast-forward — snapshots are unrelated histories — so it is an explicit pointer move, made atomic by doing all verification beforehand.
+Moving the fork's mainline to the verified replanted head and force-pushing it. Promotion cannot be a fast-forward — the Replant rewrites every Patch onto the new base — so it is an explicit pointer move, made atomic by doing all verification beforehand.
 
 ### Supersession
 Retirement of a Patch because upstream now satisfies its intent. Detected by running the Patch's own tests against the bare Upstream Snapshot (materializing the test files first, since they ship inside the Patch): if the tests pass without the Patch, upstream has absorbed it and the Patch is dropped, recorded in the Sync Log.
@@ -31,10 +33,9 @@ A Patch whose exact versioned `build(natives): refresh Bazel lock for vX.Y.Z` su
 ### Native Preparation Mode
 The sync producer selected after generated-lock refreshes are partitioned:
 `npm` acquires the exact official platform leaf for routine upstream-equivalent
-artifacts, while `bazel` is required for native-contract changes. The retained
-macOS 27 Rust toolchain/checksum overlay is builder compatibility only and stays
-npm-eligible. Auto classification fails closed for unknown native-boundary edits;
-there is no implicit producer fallback.
+artifacts, while `bazel` is required for native-contract changes. Auto
+classification fails closed for unknown native-boundary edits; there is no
+implicit producer fallback.
 
 ### Mechanical Drift
 Conflict during a Replant where the patched logic still exists in recognizably the same shape and only its surroundings moved. Resolved in place without review. The test: a reviewer could verify the resolution from the conflict hunk alone.
