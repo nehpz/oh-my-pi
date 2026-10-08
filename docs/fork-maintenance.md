@@ -377,6 +377,61 @@ For any future local change:
 
 <!-- Appended by scripts/sync-upstream.ts; newest first. -->
 
+### 2026-10-08 — v18.8.4 → v18.8.5
+
+- kept 46989e9da9 feat(ai): enforce Cursor execution policy rejections
+- kept 9e24d03406 fix(ai,coding-agent): normalize gateway model catalog metadata
+- kept abf8d9559e chore(dev): preserve fork-local development configuration
+- kept c431d24ca7 fix(natives): diagnose and safely promote workspace addons
+- kept c2036513a1 chore(fork): automate parentless syncs with verified npm natives
+- kept 586f87a6db docs(fork): retire macOS 27 Bazel overlay in favor of npm-native syncs
+- kept 5af62c82b4 chore(fork): promote automatically once sync verification passes
+- kept 9050e32ac3 chore(dev): pin the shared mnemopi bank for worktree sessions
+- kept f5fa4eef1d fix(sync): clear stale unregistered worktree directories
+- kept 5160904265 fix(coding-agent): decide non-symlink containment by the parent directory
+- kept ad23679280 docs(solutions): capture macOS hard-link realpath containment learning
+- kept 886f9f263a docs(solutions): record rejection of context-mode plugin for omp
+- kept 2ebbe71179 fix(ai): always emit context_length/max_tokens (null fallback) on gateway /v1/models
+- kept 7a5efc3f22 fix(sync): fall back to bazel-built natives when npm publish lags the upstream tag
+- kept 9a11cab8ab refactor(sync): classify fork records by file paths only, drop subject check
+- kept fdcb71c14d feat(sync): record manual-review acceptances in a durable patch-id ledger
+- kept 0dd9b69458 fix(ai): strip uniqueItems from Google/Antigravity tool schemas
+- kept e7bc804b7f feat(sync): require pinned repo-local git identity and add sync-log squash script
+- kept e4295b76ba fix(sync): accept native leaves when the core meta publish lags
+- kept 765ec40234 docs(ai): document Cloud Code Assist schema rejection workaround
+- kept b838f0e6e6 fix: resolve Bun executable before setting omp process name
+- kept d3760def52 chore(fork): record manual-review acceptances
+- kept 72486f8c12 chore(config): enable jbcontext MCP server
+- kept 20e41bc7ca chore(deps): pin Bun package manager to v1.4.2
+- kept 68ca941930 chore(fork): record manual-review acceptances
+- kept 0435c6952c chore(fork): ignore the sync-upstream resume checkpoint
+- kept de68e3ee8d fix(fork): align gateway checks with v18.2.8 replant
+- kept bb7a6e9b72 fix(auth-gateway): exclude MCP credentials from health checks
+- kept 30a1344a93 chore(fork): consolidate sync log through v18.4.2
+- kept 29ee18c5d1 chore(fork): sync log for v18.4.3
+- kept 6cda75f5c6 fix(sync): gate service restarts on versioned readiness
+- kept 54febef618 chore(fork): sync log for v18.4.5
+- kept e694d522f3 chore(fork): sync log for v18.4.9
+- kept 6fbbdfbb27 chore(fork): sync log for v18.4.10
+- kept c8208f9d9d fix(sync): create the sync worktree as a copy-on-write clone
+- kept 4e8d3350be chore(fork): sync log for v18.4.11
+- kept 5b842e86a5 chore(fork): sync log for v18.4.12
+- kept c63423846a chore(fork): sync log for v18.5.0
+- kept 2f30c9832d feat(sync): deploy auth services to a remote service host
+- kept 8e9780d5aa docs(fork): record broker-client decision, refresh sync learning
+- kept d814c1cc04 chore(fork): sync log for v18.5.1
+- kept ae9f8f2749 docs(fork): document usage-history backfill and remote login pitfalls
+- kept 09607e8219 fix(ai): name gateway models by provider in /v1/models
+- kept b5fcf83c08 fix(ai,coding-agent): match account policies on token-derived identity
+- kept 2854dc4698 chore(fork): sync log for v18.6.0
+- kept 379de583af chore(fork): sync log for v18.6.1
+- kept fcd2d4afb3 chore(fork): record manual-review acceptances
+- kept 25fd4e08f0 chore(fork): sync log for v18.6.3
+- kept 528fb1ea66 chore(fork): sync log for v18.7.0
+- kept f04f2aa480 docs(fork): capture off-main fixup folds, refresh fork-maintenance learnings
+- kept 8a9500b921 chore(fork): sync log for v18.8.0
+- kept a64911ecbd chore(fork): sync log for v18.8.4
+
 ### 2026-10-08 — v18.8.0 → v18.8.4
 
 - kept 4a5b01f570 feat(ai): enforce Cursor execution policy rejections
