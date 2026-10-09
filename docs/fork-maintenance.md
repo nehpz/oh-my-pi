@@ -377,6 +377,62 @@ For any future local change:
 
 <!-- Appended by scripts/sync-upstream.ts; newest first. -->
 
+### 2026-10-09 — v18.8.6 → v18.8.7
+
+- kept 6986ca61ca feat(ai): enforce Cursor execution policy rejections
+- kept f11b00b8a4 fix(ai,coding-agent): normalize gateway model catalog metadata
+- kept 16c5afb41a chore(dev): preserve fork-local development configuration
+- kept 95d23df962 fix(natives): diagnose and safely promote workspace addons
+- kept 36330c59c6 chore(fork): automate parentless syncs with verified npm natives
+- kept 35cae6b801 docs(fork): retire macOS 27 Bazel overlay in favor of npm-native syncs
+- kept 15fd5c8914 chore(fork): promote automatically once sync verification passes
+- kept cd5f1edf3f chore(dev): pin the shared mnemopi bank for worktree sessions
+- kept 9f054a98de fix(sync): clear stale unregistered worktree directories
+- kept d1347253b0 fix(coding-agent): decide non-symlink containment by the parent directory
+- kept 9cc74471f5 docs(solutions): capture macOS hard-link realpath containment learning
+- kept c16c3ba2d6 docs(solutions): record rejection of context-mode plugin for omp
+- kept c816452b7e fix(ai): always emit context_length/max_tokens (null fallback) on gateway /v1/models
+- kept 3ade43369e fix(sync): fall back to bazel-built natives when npm publish lags the upstream tag
+- kept 41756442b3 refactor(sync): classify fork records by file paths only, drop subject check
+- kept f7fe137d2f feat(sync): record manual-review acceptances in a durable patch-id ledger
+- kept 5b6337e8ee feat(sync): require pinned repo-local git identity and add sync-log squash script
+- kept 557e7357c9 fix(sync): accept native leaves when the core meta publish lags
+- kept 256784c8d0 docs(ai): document Cloud Code Assist schema rejection workaround
+- kept c0448aa3cb fix: resolve Bun executable before setting omp process name
+- kept 36b4154400 chore(fork): record manual-review acceptances
+- kept 32411f92c6 chore(config): enable jbcontext MCP server
+- kept d79712d5e3 chore(deps): pin Bun package manager to v1.4.2
+- kept f12e046ae0 chore(fork): record manual-review acceptances
+- kept 432b9edd4a chore(fork): ignore the sync-upstream resume checkpoint
+- kept 1440b2b164 fix(fork): align gateway checks with v18.2.8 replant
+- kept 01e4ec48f8 fix(auth-gateway): exclude MCP credentials from health checks
+- kept 0409903463 chore(fork): consolidate sync log through v18.4.2
+- kept dcad875dbe chore(fork): sync log for v18.4.3
+- kept 7ab68e80d6 fix(sync): gate service restarts on versioned readiness
+- kept 7ec06752ff chore(fork): sync log for v18.4.5
+- kept 8f538e7f0c chore(fork): sync log for v18.4.9
+- kept eee578ec3b chore(fork): sync log for v18.4.10
+- kept 697fb011fd fix(sync): create the sync worktree as a copy-on-write clone
+- kept fe30182812 chore(fork): sync log for v18.4.11
+- kept 62eba75eeb chore(fork): sync log for v18.4.12
+- kept 4818c6a571 chore(fork): sync log for v18.5.0
+- kept b8e1ee560a feat(sync): deploy auth services to a remote service host
+- kept 83e4f30abe docs(fork): record broker-client decision, refresh sync learning
+- kept f80c1ee47b chore(fork): sync log for v18.5.1
+- kept 4ef4aabad6 docs(fork): document usage-history backfill and remote login pitfalls
+- kept b9163dc7ec fix(ai): name gateway models by provider in /v1/models
+- kept 14189fd84c fix(ai,coding-agent): match account policies on token-derived identity
+- kept 6cdeb2f4af chore(fork): sync log for v18.6.0
+- kept 13cabc7224 chore(fork): sync log for v18.6.1
+- kept 8eda172549 chore(fork): record manual-review acceptances
+- kept 12c796d726 chore(fork): sync log for v18.6.3
+- kept 385bd9ee82 chore(fork): sync log for v18.7.0
+- kept 0633450dde docs(fork): capture off-main fixup folds, refresh fork-maintenance learnings
+- kept 9fa9aa949a chore(fork): sync log for v18.8.0
+- kept 89e803779d chore(fork): sync log for v18.8.4
+- kept f507991658 chore(fork): sync log for v18.8.5
+- kept 13abdc04e1 chore(fork): sync log for v18.8.6
+
 ### 2026-10-08 — v18.8.5 → v18.8.6
 
 - kept 9e0bbc6b6f feat(ai): enforce Cursor execution policy rejections
