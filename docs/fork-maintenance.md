@@ -377,6 +377,63 @@ For any future local change:
 
 <!-- Appended by scripts/sync-upstream.ts; newest first. -->
 
+### 2026-10-10 — v18.8.7 → v18.8.9
+
+- kept a7779d35bb feat(ai): enforce Cursor execution policy rejections
+- kept d1652abe83 fix(ai,coding-agent): normalize gateway model catalog metadata
+- kept 393711c408 chore(dev): preserve fork-local development configuration
+- kept 152d340dd0 fix(natives): diagnose and safely promote workspace addons
+- kept 81dac59934 chore(fork): automate parentless syncs with verified npm natives
+- kept ba3e2e5d84 docs(fork): retire macOS 27 Bazel overlay in favor of npm-native syncs
+- kept 7c6d310dd0 chore(fork): promote automatically once sync verification passes
+- kept e070ab1495 chore(dev): pin the shared mnemopi bank for worktree sessions
+- kept 6a8a1f1587 fix(sync): clear stale unregistered worktree directories
+- kept 9f6ef006cd fix(coding-agent): decide non-symlink containment by the parent directory
+- kept bf6e9eee62 docs(solutions): capture macOS hard-link realpath containment learning
+- kept 40e08d53cb docs(solutions): record rejection of context-mode plugin for omp
+- kept 364bb785db fix(ai): always emit context_length/max_tokens (null fallback) on gateway /v1/models
+- kept 450852a62a fix(sync): fall back to bazel-built natives when npm publish lags the upstream tag
+- kept 04f63850cb refactor(sync): classify fork records by file paths only, drop subject check
+- kept 0f19df7b52 feat(sync): record manual-review acceptances in a durable patch-id ledger
+- kept 89d5f03bb9 feat(sync): require pinned repo-local git identity and add sync-log squash script
+- kept 7353cc8326 fix(sync): accept native leaves when the core meta publish lags
+- kept a9ec0ad684 docs(ai): document Cloud Code Assist schema rejection workaround
+- kept 1f6c5977dd fix: resolve Bun executable before setting omp process name
+- kept 15a7f65433 chore(fork): record manual-review acceptances
+- kept 2762a3c304 chore(config): enable jbcontext MCP server
+- kept 755eeb978c chore(deps): pin Bun package manager to v1.4.2
+- kept 6c54d61b39 chore(fork): record manual-review acceptances
+- kept a3c3ad5a37 chore(fork): ignore the sync-upstream resume checkpoint
+- kept 89607e3a49 fix(fork): align gateway checks with v18.2.8 replant
+- kept ff40e459e4 fix(auth-gateway): exclude MCP credentials from health checks
+- kept de1dd909cd chore(fork): consolidate sync log through v18.4.2
+- kept b71fb16a0e chore(fork): sync log for v18.4.3
+- kept 7cda024787 fix(sync): gate service restarts on versioned readiness
+- kept af495dad17 chore(fork): sync log for v18.4.5
+- kept e992f3e4d5 chore(fork): sync log for v18.4.9
+- kept 894571a337 chore(fork): sync log for v18.4.10
+- kept 70ff7a23e1 fix(sync): create the sync worktree as a copy-on-write clone
+- kept cc58f255b9 chore(fork): sync log for v18.4.11
+- kept faae43c64e chore(fork): sync log for v18.4.12
+- kept 038cd729aa chore(fork): sync log for v18.5.0
+- kept e567e0cd2d feat(sync): deploy auth services to a remote service host
+- kept 221d9675aa docs(fork): record broker-client decision, refresh sync learning
+- kept 87c80a8787 chore(fork): sync log for v18.5.1
+- kept 0a17c8f72b docs(fork): document usage-history backfill and remote login pitfalls
+- kept 85f1e69f28 fix(ai): name gateway models by provider in /v1/models
+- kept 6716f9b2ce fix(ai,coding-agent): match account policies on token-derived identity
+- kept 868b0f4953 chore(fork): sync log for v18.6.0
+- kept f4f33928af chore(fork): sync log for v18.6.1
+- kept a847967ea7 chore(fork): record manual-review acceptances
+- kept bd79585f86 chore(fork): sync log for v18.6.3
+- kept a7cb81e4a8 chore(fork): sync log for v18.7.0
+- kept 5d926afc43 docs(fork): capture off-main fixup folds, refresh fork-maintenance learnings
+- kept dedc0b50bd chore(fork): sync log for v18.8.0
+- kept 87b6ef3c18 chore(fork): sync log for v18.8.4
+- kept d4993c16ec chore(fork): sync log for v18.8.5
+- kept 8b7c3a450c chore(fork): sync log for v18.8.6
+- kept b577517949 chore(fork): sync log for v18.8.7
+
 ### 2026-10-09 — v18.8.6 → v18.8.7
 
 - kept 6986ca61ca feat(ai): enforce Cursor execution policy rejections
