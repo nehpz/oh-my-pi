@@ -18,5 +18,10 @@
     "subject": "fix(builtins): gate cp clone_unsupported to platforms that read it",
     "reason": "accepted via --accept-manual-review",
     "date": "2026-10-06"
+  },
+  "2b30366661dddc813eaae4ac06b86cf86845df74": {
+    "subject": "chore: pin bun packageManager to 1.4.3",
+    "reason": "accepted via --accept-manual-review",
+    "date": "2026-10-11"
   }
 }
