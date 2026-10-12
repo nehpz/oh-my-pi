@@ -179,10 +179,14 @@ Deploy pushes the laptop's current HEAD (must already be on `origin`) plus the l
 #    From the laptop, authorize its key (also records the mini's host key,
 #    which BatchMode ssh in the tunnel and deploy cannot do interactively):
 ssh-copy-id stephen@10.0.0.98   # creates ~/.ssh and authorized_keys with the right modes
-# 2. On the mini: auto-login (System Settings → Users & Groups) requires
-#    FileVault off (System Settings → Privacy & Security → FileVault).
-# 3. Never sleep; restart after power failure (verify flag names: man pmset):
-sudo pmset -a sleep 0 autorestart 1
+# 2. FileVault stays on, so auto-login is unavailable. After any reboot the mini
+#    waits at the FileVault unlock screen, and the LaunchAgents (broker, gateway)
+#    start only once someone logs in at the mini. For a planned restart, unlock
+#    the next boot ahead of time: sudo fdesetup authrestart
+# 3. Never sleep (verify flag names: man pmset). autorestart is optional and
+#    currently off on the mini: with FileVault on it only brings the mini back
+#    to the unlock screen after a power failure, not to running services.
+sudo pmset -a sleep 0
 # 4. Bun + a clone of origin at the same home-relative path as the laptop checkout.
 #    The native addon is gitignored; the first deploy (cutover step 5) delivers it.
 curl -fsSL https://bun.sh/install | bash
@@ -285,7 +289,7 @@ The macOS application firewall may prompt once to allow incoming connections for
 </plist>
 ```
 
-Load with `launchctl bootstrap gui/$(id -u) <plist>` (auto-login keeps the gui domain alive; no LaunchDaemons).
+Load with `launchctl bootstrap gui/$(id -u) <plist>` (no LaunchDaemons). Agents in the gui domain run only while you are logged in, so after a reboot they start when you log in at the unlock screen.
 
 ### Laptop broker tunnel
 
