@@ -381,6 +381,52 @@ For any future local change:
 
 <!-- Appended by scripts/sync-upstream.ts; newest first. -->
 
+### 2026-10-13 — v18.10.3 → v18.10.4
+
+- kept f4e19a54c0 feat(ai): enforce Cursor execution policy rejections
+- kept 05074cb25f fix(ai,coding-agent): normalize gateway model catalog metadata
+- kept 0d46db888d chore(dev): preserve fork-local development configuration
+- kept f88ee49d3b fix(natives): diagnose and safely promote workspace addons
+- kept 8a92e3c986 chore(fork): automate parentless syncs with verified npm natives
+- kept e6a96c4b65 docs(fork): retire macOS 27 Bazel overlay in favor of npm-native syncs
+- kept 74ae377103 chore(fork): promote automatically once sync verification passes
+- kept ed3aef6b0b chore(dev): pin the shared mnemopi bank for worktree sessions
+- kept 62091fa08b fix(sync): clear stale unregistered worktree directories
+- kept ee726e0a89 fix(coding-agent): decide non-symlink containment by the parent directory
+- kept d722d357f7 docs(solutions): capture macOS hard-link realpath containment learning
+- kept 35ed76f820 docs(solutions): record rejection of context-mode plugin for omp
+- kept c0b9aef5e3 fix(ai): always emit context_length/max_tokens (null fallback) on gateway /v1/models
+- kept f2704d2666 fix(sync): fall back to bazel-built natives when npm publish lags the upstream tag
+- kept 12ffc6e752 refactor(sync): classify fork records by file paths only, drop subject check
+- kept cb355a5dd7 feat(sync): record manual-review acceptances in a durable patch-id ledger
+- kept e41ff21841 feat(sync): require pinned repo-local git identity and add sync-log squash script
+- kept 6b5b24ad8b fix(sync): accept native leaves when the core meta publish lags
+- kept 2a955b234f docs(ai): document Cloud Code Assist schema rejection workaround
+- kept 50940a542a fix: resolve Bun executable before setting omp process name
+- kept d3983989e9 chore(fork): record manual-review acceptances
+- kept 3c13f9546c chore(config): enable jbcontext MCP server
+- kept 11192a81b9 chore(deps): pin Bun package manager to v1.4.2
+- kept f14cf86c84 chore(fork): record manual-review acceptances
+- kept d9668140a3 chore(fork): ignore the sync-upstream resume checkpoint
+- kept 2ed3cad942 fix(fork): align gateway checks with v18.2.8 replant
+- kept c0f759ccf4 fix(auth-gateway): exclude MCP credentials from health checks
+- kept 870a910a78 fix(sync): gate service restarts on versioned readiness
+- kept 6e3b220da3 fix(sync): create the sync worktree as a copy-on-write clone
+- kept 66b4faf8d9 feat(sync): deploy auth services to a remote service host
+- kept bcbb232af2 docs(fork): record broker-client decision, refresh sync learning
+- kept 12916129fc docs(fork): document usage-history backfill and remote login pitfalls
+- kept 140f197515 fix(ai): name gateway models by provider in /v1/models
+- kept adb1d8db4f fix(ai,coding-agent): match account policies on token-derived identity
+- kept c49de97585 chore(fork): record manual-review acceptances
+- kept 36289b2e17 docs(fork): capture off-main fixup folds, refresh fork-maintenance learnings
+- kept a5d97abf6d chore: pin bun packageManager to 1.4.3
+- kept aea3d7fefe chore(fork): record manual-review acceptances
+- kept 2e5996f9a2 chore(fork): consolidate sync log through v18.9.2
+- kept e3722b0fd8 chore(fork): sync log for v18.10.0
+- kept 98ed4af38d chore(fork): sync log for v18.10.1
+- kept ab357ee9bf docs(fork): match mini runbook to FileVault-on setup
+- kept 098d5cb211 chore(fork): sync log for v18.10.3
+
 ### 2026-10-12 — v18.10.1 → v18.10.3
 
 - kept 3393c4bd08 feat(ai): enforce Cursor execution policy rejections
