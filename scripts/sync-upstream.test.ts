@@ -109,15 +109,27 @@ describe("resolveServiceHost", () => {
 	});
 
 	it("derives the LAN gateway URL from the ssh destination and a home-relative checkout", () => {
-		expect(resolveServiceHost("me@10.0.0.98", "", "/Users/me/src/omp", "/Users/me")).toEqual({
-			ssh: "me@10.0.0.98",
+		expect(resolveServiceHost("me@10.0.0.5", "", "/Users/me/src/omp", "/Users/me")).toEqual({
+			ssh: "me@10.0.0.5",
 			repoDir: "src/omp",
-			gatewayUrl: "http://10.0.0.98:4000",
+			gatewayUrl: "http://10.0.0.5:4000",
 		});
-		expect(resolveServiceHost("mini.lan", "/opt/omp", "/Users/me/src/omp", "/Users/me")).toMatchObject({
+		expect(resolveServiceHost("host.lan", "/opt/omp", "/Users/me/src/omp", "/Users/me")).toMatchObject({
 			repoDir: "/opt/omp",
-			gatewayUrl: "http://mini.lan:4000",
+			gatewayUrl: "http://host.lan:4000",
 		});
+	});
+
+	it("requires an explicit serviceRepoDir when the checkout is outside $HOME", () => {
+		expect(() => resolveServiceHost("host.lan", "", "/Volumes/Storage/omp", "/Users/me")).toThrow(
+			/omp-sync\.serviceRepoDir/,
+		);
+		expect(resolveServiceHost("host.lan", "src/omp", "/Volumes/Storage/omp", "/Users/me")).toMatchObject({
+			repoDir: "src/omp",
+			gatewayUrl: "http://host.lan:4000",
+		});
+		// A home directory merely named "..x" is still inside $HOME.
+		expect(resolveServiceHost("host.lan", "", "/Users/me/..x/omp", "/Users/me").repoDir).toBe("..x/omp");
 	});
 });
 

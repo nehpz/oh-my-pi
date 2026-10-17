@@ -22,7 +22,7 @@ import { LEAF_TARGETS } from "../packages/natives/scripts/gen-npm-packages.ts";
 
 export const UPSTREAM_URL = "https://github.com/can1357/oh-my-pi.git";
 const SERVICE_LABELS = ["com.omp.auth-broker", "com.omp.auth-gateway"] as const;
-// A remote service host keeps its broker on loopback; this machine reaches it through its SSH tunnel on the same port.
+// The broker is always checked on this machine's loopback: the local broker in local mode, or the SSH local forward to the remote host's loopback broker in remote mode.
 const BROKER_HEALTH_URL = "http://127.0.0.1:8765/v1/healthz";
 const LOCAL_GATEWAY_URL = "http://127.0.0.1:4000";
 // Non-interactive ssh shells skip the profile that puts bun on PATH.
@@ -546,6 +546,8 @@ async function preflight(version: string): Promise<{ baseTag: string; alreadyBas
 	if (identityError) throw new Error(identityError);
 
 	await ensureUpstreamRemote();
+	// Fail on service-host misconfiguration now, not after promotion has already moved main.
+	await readServiceHost();
 
 	const baseTag = await resolveBaseTagOf("main");
 	if (!baseTag) {
@@ -1529,9 +1531,16 @@ export function resolveServiceHost(
 	home: string = os.homedir(),
 ): ServiceHost {
 	if (!destination) return { repoDir: localRoot, gatewayUrl: LOCAL_GATEWAY_URL };
+	let repoDir = remoteRepoDir;
+	if (!repoDir) {
+		repoDir = path.relative(home, localRoot);
+		if (path.isAbsolute(repoDir) || repoDir === ".." || repoDir.startsWith(`..${path.sep}`)) {
+			throw new Error("checkout is not under $HOME; set git config omp-sync.serviceRepoDir");
+		}
+	}
 	return {
 		ssh: destination,
-		repoDir: remoteRepoDir || path.relative(home, localRoot),
+		repoDir,
 		gatewayUrl: `http://${destination.slice(destination.lastIndexOf("@") + 1)}:4000`,
 	};
 }
@@ -1627,7 +1636,7 @@ async function bounceServices(version: string, deploy?: { sha: string; addonRoot
 		console.log(`restarting ${SERVICE_LABELS[0]}...`);
 		await runOnServiceHost(target, KICKSTART_SCRIPT, [SERVICE_LABELS[0]]);
 		await waitForServiceHealth(
-			target.ssh ? `${SERVICE_LABELS[0]} (via SSH tunnel)` : SERVICE_LABELS[0],
+			target.ssh ? `${SERVICE_LABELS[0]} (via SSH forward)` : SERVICE_LABELS[0],
 			BROKER_HEALTH_URL,
 			bare,
 		);
@@ -1775,7 +1784,7 @@ async function cmdSync(
 		}
 		console.log(`  7. promote: exact confirmation then push --force-with-lease; bun install`);
 		console.log(
-			`  8. services: deploy to git config omp-sync.serviceHost when set; kickstart ${SERVICE_LABELS.join(", ")}; wait for broker+gateway /healthz reporting ${version}; /v1/models shape`,
+			`  8. services: kickstart ${SERVICE_LABELS.join(", ")} on this machine, or deploy to git config omp-sync.serviceHost when set; wait for broker+gateway /healthz reporting ${version}; /v1/models shape`,
 		);
 		console.log("  9. sync log: append entry to docs/fork-maintenance.md, commit, push");
 		return;

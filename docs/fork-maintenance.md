@@ -9,7 +9,7 @@ This repo is a fork of [can1357/oh-my-pi](https://github.com/can1357/oh-my-pi) c
 - **Tag conventions:**
   - `upstream/vX.Y.Z` — local mirror of upstream's release tag. The newest one that is an ancestor of `main` is the fork's **current base**. Because snapshots are parentless, this tag is the only durable base marker — never delete these.
   - `fork/pre-vX.Y.Z` — the fork's state immediately before the sync to `vX.Y.Z`. Rollback target. The sync pushes it to `origin` so a remote service host can fetch the commit after the next force-push drops it from `main`.
-- **The checkout is production.** The `omp` CLI on PATH is source-linked to this repo, and the launchd services `com.omp.auth-broker` / `com.omp.auth-gateway` exec `packages/coding-agent/scripts/omp` directly — either from this checkout (default) or, when `git config omp-sync.serviceHost` is set, from a checkout of the same repo on the remote service host (see [Service host (Mac mini)](#service-host-mac-mini)). `main` must never sit in a broken or mid-rebase state — all sync work happens in a separate worktree until verified.
+- **The checkout is production.** The `omp` CLI on PATH is source-linked to this repo, and the launchd services `com.omp.auth-broker` / `com.omp.auth-gateway` exec `packages/coding-agent/scripts/omp` directly — either from this checkout (default) or, when `git config omp-sync.serviceHost` is set, from a checkout of the same repo on a remote service host (see [Auth services](#auth-services)). `main` must never sit in a broken or mid-rebase state — all sync work happens in a separate worktree until verified.
 - **The sync worktree is a copy-on-write clone of the checkout** (APFS `clonefile` on macOS; plain checkout fallback elsewhere). It inherits gitignored outputs — `node_modules` and `packages/natives/native/*.node` — so conflict investigation has a loadable addon immediately. That addon is the *previous* release's build; verification always swaps in the exact-version addon first, so only trust native-dependent results after the script's verify phase. The cargo `target/` is dropped after cloning (its CMake caches pin the checkout's absolute path), and verify runs `check:rs` only when a fork patch touches `crates/`, `.cargo/`, `Cargo.toml`, `Cargo.lock`, or `rust-toolchain.toml` — otherwise it would only cold-check upstream's tagged Rust, which the fork never builds.
 
 ## Sync procedure
@@ -55,10 +55,10 @@ limited to 1.5 seconds or the remaining deadline, whichever is shorter.
 
 Where the services run depends on `git config omp-sync.serviceHost`:
 
-- **Unset (local mode):** the script runs `launchctl kickstart` locally and
-  checks `http://127.0.0.1:8765/v1/healthz` and `http://127.0.0.1:4000/healthz`
-  on this machine.
-- **Set (remote mode):** the script runs the same deploy as
+- **Unset (local mode, the default):** the script runs `launchctl kickstart`
+  locally and checks `http://127.0.0.1:8765/v1/healthz` and
+  `http://127.0.0.1:4000/healthz` on this machine.
+- **Set (remote mode, optional):** the script runs the same deploy as
   `bun scripts/sync-upstream.ts deploy` — `scp` the checkout's
   `packages/natives/native/*.node` to a fresh `mktemp -d` directory on the host,
   then over `ssh -o BatchMode=yes` (with
@@ -66,16 +66,17 @@ Where the services run depends on `git config omp-sync.serviceHost`:
   `git fetch --tags origin`, verify the commit exists, copy the staged addon
   into the checkout's filesystem, `git reset --hard <sha>`, swap the addon set
   in by rename, `bun install --frozen-lockfile`, and
-  `launchctl kickstart -k gui/$(id -u)/com.omp.auth-broker`. The laptop then
-  waits for broker `/v1/healthz` at `http://127.0.0.1:8765` — i.e. **through
-  the SSH tunnel**, which must be up — before the host kickstarts
-  `com.omp.auth-gateway` and the laptop checks `http://<host>:4000/healthz`.
+  `launchctl kickstart -k gui/$(id -u)/com.omp.auth-broker`. This machine then
+  waits for broker `/v1/healthz` at `http://127.0.0.1:8765` — through the SSH
+  local forward, which must be up — before the host kickstarts
+  `com.omp.auth-gateway` and this machine checks `http://<host>:4000/healthz`.
 
 The authenticated `/v1/models` check retains its five-second request/body timeout
 and verifies unique provider/id pairs and `context_length`. In remote mode it
 targets `http://<host>:4000/v1/models` with the gateway token read on the host
-via `packages/coding-agent/scripts/omp auth-gateway token`. Credential-level
-`auth-gateway check` remains laptop-local and informational.
+via `packages/coding-agent/scripts/omp auth-gateway token`. A credential-level
+`auth-gateway check` also runs — locally wherever the script runs, informational
+only (its output is printed; a nonzero exit does not fail the sync).
 
 If a post-promotion service check fails, the upgrade is already live and pushed.
 The error names the failed stage and prints the command to resume:
@@ -116,99 +117,70 @@ Prefer upstream, drop mine: when in doubt whether upstream's version fully cover
 
 If the promoted code is confirmed broken (pre-promotion failures abort before `main` ever moves), roll back.
 
-**Remote mode** (`omp-sync.serviceHost` set): roll the service host back **first**, while the checkout still holds the current sync script — a `fork/pre-*` target from before remote deploys existed has a script without `deploy`:
-
-```bash
-git push origin refs/tags/fork/pre-vX.Y.Z   # syncs from this change on push it automatically; older tags were local-only
-bun scripts/sync-upstream.ts deploy fork/pre-vX.Y.Z
-```
-
-Deploying a ref other than `HEAD` ships that release's npm native addon (`@oh-my-pi/pi-natives-<platform>@X.Y.Z`) instead of the checkout's, so the host's addon matches its code. A rollback target whose patches needed a Bazel-built addon cannot be redeployed this way.
-
-Then roll the checkout back (both modes):
+**Local mode** (`omp-sync.serviceHost` unset, the default): roll the checkout back, then restart the services on this machine:
 
 ```bash
 git reset --hard fork/pre-vX.Y.Z
 bun install
-```
 
-**Local mode** (`omp-sync.serviceHost` unset): restart the services on this machine:
-
-```bash
 launchctl kickstart -k gui/$UID/com.omp.auth-broker
 until curl -fsS --max-time 2 http://127.0.0.1:8765/v1/healthz; do sleep 1; done
 launchctl kickstart -k gui/$UID/com.omp.auth-gateway
 curl -fsS http://127.0.0.1:4000/healthz
 ```
 
-This restores the local CLI and inference services to the last known-good state; it does not rewind `origin/main`. Investigate in the sync worktree afterwards.
+**Remote mode** (`omp-sync.serviceHost` set, optional): roll the service host back **first**, while the checkout still holds the current sync script — a `fork/pre-*` target from before remote deploys existed has a script without `deploy`:
 
-## Service host (Mac mini)
+```bash
+git push origin refs/tags/fork/pre-vX.Y.Z   # newer tags are pushed automatically by the sync; older ones were local-only
+bun scripts/sync-upstream.ts deploy fork/pre-vX.Y.Z
+```
 
-The auth broker and gateway can run on an always-on Mac mini (`stephen@10.0.0.98`, LAN-only; remote access via the UniFi VPN) instead of the laptop. The laptop then reaches the broker through an SSH tunnel, and the gateway listens on `0.0.0.0:4000` (plain HTTP) for other hosts and OpenAI-compatible harnesses.
+Deploying a ref other than `HEAD` ships that release's npm native addon (`@oh-my-pi/pi-natives-<platform>@X.Y.Z`) instead of the checkout's, so the host's addon matches its code. A rollback target whose patches needed a Bazel-built addon cannot be redeployed this way.
+
+Then roll the checkout back:
+
+```bash
+git reset --hard fork/pre-vX.Y.Z
+bun install
+```
+
+Either way, this restores the services to the last known-good state; it does not rewind `origin/main`. Investigate in the sync worktree afterwards.
+
+## Auth services
+
+The primary machine runs the auth broker (`127.0.0.1:8765`) and gateway (`0.0.0.0:4000`, plain HTTP, for LAN hosts and OpenAI-compatible harnesses) under launchd, exec'ing `packages/coding-agent/scripts/omp` from this checkout. This is the default mode: `git config omp-sync.serviceHost` unset.
 
 Design constraints:
 
-- **Broker stays loopback-only** on the mini (`127.0.0.1:8765`): broker snapshots carry plaintext OAuth access tokens and all API keys, so it must never be LAN-reachable. The gateway token only spends quota, so the gateway is the LAN-facing piece.
-- **Exactly one broker may hold credentials.** Two brokers refreshing the same OAuth credential race on refresh-token rotation; the loser gets `invalid_grant`, treats it as definitive, and disables the credential globally. Stop the laptop broker before the mini broker takes over.
-- **Gateway binds `0.0.0.0`, not `10.0.0.98`.** Binding the specific LAN address drops loopback, which breaks the gateway's own broker client at `127.0.0.1:8765`; `0.0.0.0` serves LAN and loopback.
+- **Broker stays loopback-only** (`127.0.0.1:8765`): broker snapshots carry plaintext OAuth access tokens and all API keys, so it must never be LAN-reachable. The gateway token only spends quota, so the gateway is the LAN-facing piece.
+- **Exactly one broker may hold credentials.** Two brokers refreshing the same OAuth credential race on refresh-token rotation; the loser gets `invalid_grant`, treats it as definitive, and disables the credential globally. Stop any other broker before a new one takes over.
+- **Gateway binds `0.0.0.0`, not the LAN IP.** Binding a specific LAN address drops loopback, which breaks the gateway's own broker client at `127.0.0.1:8765`; `0.0.0.0` serves LAN and loopback.
 
-### Service host configuration
-
-Selected per checkout via git config (normally `--local`):
+### Prerequisites
 
 ```bash
-git config --local omp-sync.serviceHost stephen@10.0.0.98          # unset = local mode
-git config --local omp-sync.serviceRepoDir Projects/nehpz/oh-my-pi # optional; default = checkout path relative to laptop $HOME
-```
-
-`omp-sync.serviceHost` must be `user@ip` or a resolvable hostname; the gateway URL is derived as `http://<host>:4000`. `omp-sync.serviceRepoDir` is absolute on the host or relative to the remote `$HOME`.
-
-Deploy on demand (also runs automatically after every sync promotion and on the already-based resume path):
-
-```bash
-bun scripts/sync-upstream.ts deploy [<git-ref>] [--dry-run]
-```
-
-Deploy pushes the laptop's current HEAD (must already be on `origin`) plus the laptop checkout's live `packages/natives/native/*.node`, resets the host checkout to that commit, `bun install --frozen-lockfile`, restarts broker then gateway, and runs the same health gates as a promotion. With a `<git-ref>` (a rollback), it deploys that commit with its release's npm native addon instead. A `packages/natives/native/.deploy-lock` directory on the host serializes deploys; a second concurrent deploy fails fast, and a lock left by a killed deploy names itself in the error for manual removal. The sync-log commit pushed after deploy leaves the host one docs-only commit behind; harmless — the next deploy catches up.
-
-### Mini prerequisites
-
-```bash
-# 1. On the mini: System Settings → General → Sharing → Remote Login → on.
-#    From the laptop, authorize its key (also records the mini's host key,
-#    which BatchMode ssh in the tunnel and deploy cannot do interactively):
-ssh-copy-id stephen@10.0.0.98   # creates ~/.ssh and authorized_keys with the right modes
-# 2. FileVault stays on, so auto-login is unavailable. After any reboot the mini
-#    waits at the FileVault unlock screen, and the LaunchAgents (broker, gateway)
-#    start only once someone logs in at the mini. For a planned restart, unlock
-#    the next boot ahead of time: sudo fdesetup authrestart
-# 3. Never sleep (verify flag names: man pmset). autorestart is optional and
-#    currently off on the mini: with FileVault on it only brings the mini back
-#    to the unlock screen after a power failure, not to running services.
+# 1. FileVault stays on, so auto-login is unavailable. After any reboot the
+#    machine waits at the FileVault unlock screen, and the LaunchAgents
+#    (broker, gateway) start only once someone logs in. For a planned restart,
+#    unlock the next boot ahead of time: sudo fdesetup authrestart
+# 2. Never sleep (verify flag names: man pmset). autorestart is optional and
+#    currently off: with FileVault on it only brings the machine back to the
+#    unlock screen after a power failure, not to running services.
 sudo pmset -a sleep 0
-# 4. Bun + a clone of origin at the same home-relative path as the laptop checkout.
-#    The native addon is gitignored; the first deploy (cutover step 5) delivers it.
-curl -fsSL https://bun.sh/install | bash
-git clone <origin-url> ~/Projects/nehpz/oh-my-pi
+# 3. ~/.omp/logs for the service logs.
 mkdir -p ~/.omp/logs
-# 5. ~/.omp/agent/config.yml on the mini needs, at minimum:
+# 4. ~/.omp/agent/config.yml needs, at minimum:
 #      auth.broker.url: http://127.0.0.1:8765
 #    (the gateway is itself a broker client) plus any auth.accountPolicies /
-#    retry.usageReservePct copied from the laptop config.
-# 6. From the laptop, copy both tokens so the mini serves the tokens the laptop
-#    and every gateway client already hold (otherwise the mini generates new
-#    ones and the laptop's broker calls, including `migrate`, fail with 401):
-for t in auth-broker auth-gateway; do
-  ssh stephen@10.0.0.98 "umask 077; cat > ~/.omp/$t.token" < ~/.omp/$t.token
-done
+#    retry.usageReservePct.
 ```
 
 The macOS application firewall may prompt once to allow incoming connections for `bun`.
 
-### Mini LaunchAgents
+### LaunchAgents
 
-`~/Library/LaunchAgents/com.omp.auth-broker.plist` on the mini — identical to the laptop's (loopback 127.0.0.1:8765):
+`~/Library/LaunchAgents/com.omp.auth-broker.plist` (loopback 127.0.0.1:8765):
 
 ```xml
 <?xml version="1.0" encoding="UTF-8"?>
@@ -248,7 +220,7 @@ The macOS application firewall may prompt once to allow incoming connections for
 </plist>
 ```
 
-`~/Library/LaunchAgents/com.omp.auth-gateway.plist` on the mini — adds `--bind=0.0.0.0:4000`:
+`~/Library/LaunchAgents/com.omp.auth-gateway.plist` — adds `--bind=0.0.0.0:4000`:
 
 ```xml
 <?xml version="1.0" encoding="UTF-8"?>
@@ -291,81 +263,92 @@ The macOS application firewall may prompt once to allow incoming connections for
 
 Load with `launchctl bootstrap gui/$(id -u) <plist>` (no LaunchDaemons). Agents in the gui domain run only while you are logged in, so after a reboot they start when you log in at the unlock screen.
 
-### Laptop broker tunnel
+### Remote service host (optional)
 
-`~/Library/LaunchAgents/com.omp.auth-broker-tunnel.plist` on the laptop — keeps `127.0.0.1:8765` forwarded to the mini's broker so laptop config/URLs stay unchanged, and `127.0.0.1:4000` forwarded to the mini's gateway so laptop-local tools configured for `http://127.0.0.1:4000` keep working:
+The auth broker and gateway can instead run on a remote host, with this machine reaching the broker through an SSH local forward and the gateway listening on `0.0.0.0:4000` for other hosts and OpenAI-compatible harnesses. In remote mode this machine must **not** run its own broker (exactly one broker holds credentials), and `127.0.0.1:8765` on this machine must be an SSH local forward to the host's loopback broker:
 
-```xml
-<?xml version="1.0" encoding="UTF-8"?>
-<!DOCTYPE plist PUBLIC "-//Apple//DTD PLIST 1.0//EN" "http://www.apple.com/DTDs/PropertyList-1.0.dtd">
-<plist version="1.0">
-<dict>
-	<key>KeepAlive</key>
-	<true/>
-	<key>Label</key>
-	<string>com.omp.auth-broker-tunnel</string>
-	<key>ProgramArguments</key>
-	<array>
-		<string>/usr/bin/ssh</string>
-		<string>-N</string>
-		<string>-o</string>
-		<string>BatchMode=yes</string>
-		<string>-o</string>
-		<string>ExitOnForwardFailure=yes</string>
-		<string>-o</string>
-		<string>ServerAliveInterval=30</string>
-		<string>-o</string>
-		<string>ServerAliveCountMax=3</string>
-		<string>-L</string>
-		<string>127.0.0.1:8765:127.0.0.1:8765</string>
-		<string>-L</string>
-		<string>127.0.0.1:4000:127.0.0.1:4000</string>
-		<string>stephen@10.0.0.98</string>
-	</array>
-	<key>RunAtLoad</key>
-	<true/>
-	<key>ThrottleInterval</key>
-	<integer>10</integer>
-</dict>
-</plist>
+```bash
+ssh -N -L 127.0.0.1:8765:127.0.0.1:8765 stephen@other-host
 ```
 
-### Cutover order
+(Forward `127.0.0.1:4000` the same way if local tools here are configured for `http://127.0.0.1:4000`.)
 
-1. Stop the laptop services and move their plists out of `~/Library/LaunchAgents` (single-broker constraint — do this before the mini broker holds credentials):
+Selected per checkout via git config (normally `--local`):
+
+```bash
+git config --local omp-sync.serviceHost stephen@other-host          # unset = local mode
+git config --local omp-sync.serviceRepoDir Projects/nehpz/oh-my-pi  # optional; see below
+```
+
+`omp-sync.serviceHost` must be `user@ip` or a resolvable hostname; the gateway URL is derived as `http://<host>:4000`. `omp-sync.serviceRepoDir` is absolute on the host or relative to the remote `$HOME`. If it is unset, the default is this checkout's path relative to this machine's `$HOME`; if this checkout is not under `$HOME` (e.g. on a mounted volume under `/Volumes`, so the relative path starts with `..`), the script errors and you must set `omp-sync.serviceRepoDir` explicitly.
+
+Deploy on demand (also runs automatically after every sync promotion and on the already-based resume path):
+
+```bash
+bun scripts/sync-upstream.ts deploy [<git-ref>] [--dry-run]
+```
+
+Deploy pushes this machine's current HEAD (must already be on `origin`) plus this checkout's live `packages/natives/native/*.node`, resets the host checkout to that commit, `bun install --frozen-lockfile`, restarts broker then gateway, and runs the same health gates as a promotion. With a `<git-ref>` (a rollback), it deploys that commit with its release's npm native addon instead. A `packages/natives/native/.deploy-lock` directory on the host serializes deploys; a second concurrent deploy fails fast, and a lock left by a killed deploy names itself in the error for manual removal. The sync-log commit pushed after deploy leaves the host one docs-only commit behind; harmless — the next deploy catches up.
+
+Host prerequisites:
+
+```bash
+# 1. On the host: System Settings → General → Sharing → Remote Login → on.
+#    From this machine, authorize its key (also records the host's host key,
+#    which BatchMode ssh in the tunnel and deploy cannot do interactively):
+ssh-copy-id stephen@other-host   # creates ~/.ssh and authorized_keys with the right modes
+# 2. Bun + a clone of origin on the host:
+curl -fsSL https://bun.sh/install | bash
+git clone <origin-url> ~/Projects/nehpz/oh-my-pi   # or wherever omp-sync.serviceRepoDir points
+mkdir -p ~/.omp/logs
+# 3. Install the broker and gateway plists under ~/Library/LaunchAgents on the
+#    host (same content as above, host paths); bootstrap them at cutover step 3.
+# 4. If gateway clients must keep their tokens, copy both tokens from this
+#    machine (otherwise the host generates new ones and calls, including
+#    `migrate`, fail with 401):
+for t in auth-broker auth-gateway; do
+  ssh stephen@other-host "umask 077; cat > ~/.omp/$t.token" < ~/.omp/$t.token
+done
+# 5. ~/.omp/agent/config.yml on the host needs, at minimum:
+#      auth.broker.url: http://127.0.0.1:8765
+```
+
+#### Cutover order
+
+1. Stop this machine's services and move their plists out of `~/Library/LaunchAgents` (single-broker constraint — do this before the host broker holds credentials):
    ```bash
    launchctl bootout gui/$UID/com.omp.auth-broker
    launchctl bootout gui/$UID/com.omp.auth-gateway
    mv ~/Library/LaunchAgents/com.omp.auth-{broker,gateway}.plist ~/.omp/
    ```
-2. `git config --local omp-sync.serviceHost stephen@10.0.0.98` in the laptop checkout.
-3. Bootstrap the mini's broker and gateway plists (`launchctl bootstrap`). They restart-loop until step 5 delivers the native addon.
-4. Load `com.omp.auth-broker-tunnel` on the laptop.
-5. `bun scripts/sync-upstream.ts deploy` — fetches, resets, installs the addon and dependencies, restarts both services, and passes the health gates (broker through the tunnel, gateway at `http://10.0.0.98:4000`). The broker is still empty here; `/v1/models` lists nothing yet.
-6. Copy credentials to the mini broker through the tunnel — do **not** copy `agent.db` (it also holds laptop-local settings/threads/usage history):
+2. `git config --local omp-sync.serviceHost stephen@other-host` in this checkout.
+3. Bootstrap the host's broker and gateway plists (`launchctl bootstrap` over ssh). They restart-loop until step 5 delivers the native addon.
+4. Bring up the SSH local forward to the host (the `ssh -N -L` command above, or a LaunchAgent wrapping it).
+5. `bun scripts/sync-upstream.ts deploy` — fetches, resets, installs the addon and dependencies, restarts both services, and passes the health gates (broker through the forward, gateway at `http://<host>:4000`). The broker is still empty here; `/v1/models` lists nothing yet.
+6. Copy credentials to the host broker through the forward — do **not** copy `agent.db` (it also holds local settings/threads/usage history):
    ```bash
    omp auth-broker migrate --from-local --include-oauth --dry-run
    omp auth-broker migrate --from-local --include-oauth
    ```
-   Then rerun `bun scripts/sync-upstream.ts deploy` (or start a laptop omp session) to confirm the model list is back.
+   Then rerun `bun scripts/sync-upstream.ts deploy` (or start an omp session here) to confirm the model list is back.
 
-   `migrate` moves credentials only. `omp stats` subscription-window charts read `usage_history` from the broker once one is configured, so append the laptop's history to the mini (rows keep their `recorded_at`/`resets_at`; only `id` is renumbered, and every reader orders by `recorded_at`). Extract the table alone so the laptop's credentials never leave it, back up the mini DB, then insert only rows older than the mini's first row — re-running inserts nothing:
+   `migrate` moves credentials only. `omp stats` subscription-window charts read `usage_history` from the broker once one is configured, so append this machine's history to the host (rows keep their `recorded_at`/`resets_at`; only `id` is renumbered, and every reader orders by `recorded_at`). Extract the table alone so this machine's credentials never leave it, back up the host DB, then insert only rows older than the host's first row — re-running inserts nothing:
    ```bash
    sqlite3 /tmp/uh.db "ATTACH 'file:$HOME/.omp/agent/agent.db?mode=ro' AS src; CREATE TABLE usage_history AS SELECT recorded_at, provider, account_key, email, account_id, limit_id, label, window_label, used_fraction, status, resets_at FROM src.usage_history"
-   scp /tmp/uh.db stephen@10.0.0.98:/tmp/uh.db
-   ssh stephen@10.0.0.98 'cd ~/.omp/agent && sqlite3 agent.db ".backup agent.db.pre-usage-backfill" && sqlite3 agent.db "ATTACH \"/tmp/uh.db\" AS l; INSERT INTO usage_history (recorded_at, provider, account_key, email, account_id, limit_id, label, window_label, used_fraction, status, resets_at) SELECT recorded_at, provider, account_key, email, account_id, limit_id, label, window_label, used_fraction, status, resets_at FROM l.usage_history WHERE recorded_at < (SELECT min(recorded_at) FROM main.usage_history) ORDER BY recorded_at" && rm /tmp/uh.db'
+   scp /tmp/uh.db stephen@other-host:/tmp/uh.db
+   ssh stephen@other-host 'cd ~/.omp/agent && sqlite3 agent.db ".backup agent.db.pre-usage-backfill" && sqlite3 agent.db "ATTACH \"/tmp/uh.db\" AS l; INSERT INTO usage_history (recorded_at, provider, account_key, email, account_id, limit_id, label, window_label, used_fraction, status, resets_at) SELECT recorded_at, provider, account_key, email, account_id, limit_id, label, window_label, used_fraction, status, resets_at FROM l.usage_history WHERE recorded_at < (SELECT min(recorded_at) FROM main.usage_history) ORDER BY recorded_at" && rm /tmp/uh.db'
    ```
    Check a backup with `sqlite3 "file:<backup>?immutable=1" "pragma integrity_check"`; a plain `-readonly` open fails on a WAL-mode copy without its `-shm` file.
-7. Point other hosts / OpenAI-compatible harnesses at `http://10.0.0.98:4000/v1` with the mini's gateway token (`packages/coding-agent/scripts/omp auth-gateway token`, run on the mini).
+7. Point other hosts / OpenAI-compatible harnesses at `http://<host>:4000/v1` with the host's gateway token (`packages/coding-agent/scripts/omp auth-gateway token`, run on the host).
 
-### Credential management under a remote broker
+#### Credential management under a remote broker
 
-- `/login` inside a laptop omp session, or `omp login <provider>` on the laptop, writes the credential to the mini broker (`POST /v1/credential` through the tunnel; the CLI prints `Credentials saved to auth broker …`) — the normal path for adding or re-authorizing accounts.
-- **Not** `omp auth-broker login <provider>` on the laptop: without `--via`, `auth-broker login` and `auth-broker logout` always open the local `agent.db`, which nothing reads after cutover. The credential silently lands in the dead laptop vault.
-- Logout and disable go through the mini: the laptop's broker-backed store rejects deletes by design. Run `~/Projects/nehpz/oh-my-pi/packages/coding-agent/scripts/omp auth-broker logout <provider>` over ssh.
-- `omp auth-broker login <provider> --via=stephen@10.0.0.98` runs a bare `omp` on the mini over a non-interactive ssh shell, so `omp` and `bun` (the launcher execs `bun`) must be on that shell's PATH. Without sudo: `ln -s ~/Projects/nehpz/oh-my-pi/packages/coding-agent/scripts/omp ~/.bun/bin/omp && echo 'export PATH="$HOME/.bun/bin:$PATH"' >> ~/.zshenv` on the mini (zsh reads `~/.zshenv` for ssh commands too). Prefer `/login`.
-- On the mini, run the checkout launcher (`~/Projects/nehpz/oh-my-pi/packages/coding-agent/scripts/omp`): `auth-broker login|logout` write the mini's local DB directly; `auth-broker import` uploads through the configured broker, so the mini's broker must be running.
-- New credentials need no restart: the gateway checks the broker for credential changes every 10 seconds and refreshes its catalog when they change. `omp models refresh` on the laptop refreshes only the laptop's own catalog cache.
+- `/login` inside an omp session on this machine, or `omp login <provider>` here, writes the credential to the host broker (`POST /v1/credential` through the forward; the CLI prints `Credentials saved to auth broker …`) — the normal path for adding or re-authorizing accounts.
+- **Not** `omp auth-broker login <provider>` on this machine: without `--via`, `auth-broker login` and `auth-broker logout` always open the local `agent.db`, which nothing reads after cutover. The credential silently lands in the dead local vault.
+- Logout and disable go through the host: this machine's broker-backed store rejects deletes by design. Run `<repoDir>/packages/coding-agent/scripts/omp auth-broker logout <provider>` over ssh.
+- `omp auth-broker login <provider> --via=stephen@other-host` runs a bare `omp` on the host over a non-interactive ssh shell, so `omp` and `bun` (the launcher execs `bun`) must be on that shell's PATH. Without sudo: `ln -s <repoDir>/packages/coding-agent/scripts/omp ~/.bun/bin/omp && echo 'export PATH="$HOME/.bun/bin:$PATH"' >> ~/.zshenv` on the host (zsh reads `~/.zshenv` for ssh commands too). Prefer `/login`.
+- On the host, run the checkout launcher (`<repoDir>/packages/coding-agent/scripts/omp`): `auth-broker login|logout` write the host's local DB directly; `auth-broker import` uploads through the configured broker, so the host's broker must be running.
+- New credentials need no restart: the gateway checks the broker for credential changes every 10 seconds and refreshes its catalog when they change. `omp models refresh` on this machine refreshes only this machine's own catalog cache.
 
 ## Patch-authoring rules
 
