@@ -92,7 +92,7 @@ The dividing question: could a competent reviewer verify the resolution by looki
 
 #### Worktree isolation and promotion
 
-The checkout drives live services: `com.omp.auth-broker` and `com.omp.auth-gateway` run under launchd and exec `packages/coding-agent/scripts/omp`, either from this checkout or, when `git config omp-sync.serviceHost` is set, from a checkout on a separate service host that each promotion deploys to (see the runbook's "Service host (Mac mini)" section). Either way `main` must never sit mid-rebase or unverified. All verification runs in the worktree. Fast-forward promotion is impossible across unrelated histories — promotion moves `main` explicitly:
+The checkout drives live services: `com.omp.auth-broker` and `com.omp.auth-gateway` run under launchd and exec `packages/coding-agent/scripts/omp`, either from this checkout or, when `git config omp-sync.serviceHost` is set, from a checkout on a separate service host that each promotion deploys to (see the runbook's "Remote service host (optional)" section). Either way `main` must never sit mid-rebase or unverified. All verification runs in the worktree. Fast-forward promotion is impossible across unrelated histories — promotion moves `main` explicitly:
 
 ```bash
 git reset --hard <verified-sync-head>
@@ -177,7 +177,7 @@ bun scripts/sync-upstream.ts v17.0.8           # full sync
 ## Related
 
 - `docs/fork-maintenance.md` — the runbook: conflict decision rule, supersession protocol, rollback, service host deploy, patch-authoring rules, sync log.
-- [omp hosts consume a remote auth service as broker clients](../decisions/omp-hosts-consume-remote-auth-as-broker-clients.md) — why the broker stays loopback-only on a remote service host and the laptop reaches it through a tunnel.
+- [omp hosts consume a remote auth service as broker clients](../decisions/omp-hosts-consume-remote-auth-as-broker-clients.md) — why the broker stays loopback-only on a remote service host and a client host reaches it through an SSH forward.
 - [Fork sync: `.gitignore` rebase conflict and Bazel verify gate](./fork-sync-upstream-gitignore-rebase-conflict.md) — v17.1.6 incident playbook (mechanical `.gitignore`, `bazelisk`, status test capture).
 - `scripts/sync-upstream.ts` — sync automation; `scripts/sync-upstream.test.ts` — its unit tests; `scripts/bazel-natives.ts` — Bazel driver for native builds.
 - `docs/plans/2026-07-21-001-chore-upstream-sync-process-plan.md` — the plan that produced this process.
