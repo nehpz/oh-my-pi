@@ -36,11 +36,11 @@ The broker and gateway moved from the laptop to an always-on Mac mini so other L
 
 ## Guidance
 
-**A trusted omp host stays a broker client.** Point `auth.broker.url` at the remote broker. Keep the broker bound to loopback on the service host and reach it through an SSH local forward, so the laptop config stays `http://127.0.0.1:8765`:
+**A trusted omp host stays a broker client.** Point `auth.broker.url` at the remote broker. Keep the broker bound to loopback on the service host and reach it through an SSH local forward, so the client host config stays `http://127.0.0.1:8765`:
 
 ```bash
 ssh -N -o BatchMode=yes -o ExitOnForwardFailure=yes \
-  -L 127.0.0.1:8765:127.0.0.1:8765 -L 127.0.0.1:4000:127.0.0.1:4000 stephen@10.0.0.98
+  -L 127.0.0.1:8765:127.0.0.1:8765 -L 127.0.0.1:4000:127.0.0.1:4000 <user@service-host>
 ```
 
 **Only non-omp consumers use the gateway** (`--bind=0.0.0.0:4000`, `http://<host>:4000/v1` + gateway token). Not `--bind=<lan-ip>`: that drops loopback, and the gateway reaches its own broker at `127.0.0.1:8765`.
@@ -55,7 +55,7 @@ Why not gateway-client mode for omp — what the live experiment showed (session
 
 Features that read credentials outside `streamSimple` also break in gateway-only mode — e.g. web search pulls keys from `authStorage` directly (`packages/coding-agent/src/web/search/providers/exa.ts:439-444`), and usage/quota display reads the broker.
 
-Broker-client mode has none of these gaps and costs nothing extra: `/login` in a broker-client session uploads the credential to the remote broker (`RemoteAuthCredentialStore.upsertAuthCredential` → `POST /v1/credential`, `packages/ai/src/auth-broker/remote-store.ts:858-867`), so accounts are still managed from the laptop.
+Broker-client mode has none of these gaps and costs nothing extra: `/login` in a broker-client session uploads the credential to the remote broker (`RemoteAuthCredentialStore.upsertAuthCredential` → `POST /v1/credential`, `packages/ai/src/auth-broker/remote-store.ts:858-867`), so accounts are still managed from the client host.
 
 **The service host needs no `~/.omp` sync.** `omp auth-gateway serve` builds its registry with `ignoreLocalModelConfig: true` (`auth-gateway-cli.ts:294`) and loads no plugins, MCP servers, or marketplaces; it reads `auth.broker.url`, account-policy keys, and the token files. Copying `~/.omp` would only risk overwriting the live credential DB with stale refresh tokens.
 
@@ -73,7 +73,7 @@ Broker-client mode has none of these gaps and costs nothing extra: `/login` in a
 
 ## Examples
 
-Laptop `~/.omp/agent/config.yml` before and after the move — unchanged, because the tunnel preserves the URL:
+Client host `~/.omp/agent/config.yml` before and after the move — unchanged, because the tunnel preserves the URL:
 
 ```yaml
 auth.broker.url: http://127.0.0.1:8765
@@ -85,12 +85,12 @@ Service host `~/.omp/agent/config.yml` — the whole file:
 auth.broker.url: http://127.0.0.1:8765
 ```
 
-Rejected laptop config (gateway client), for contrast:
+Rejected client-host config (gateway client), for contrast:
 
 ```yaml
 providers:
   anthropic:
-    baseUrl: http://10.0.0.98:4000
+    baseUrl: http://<service-host>:4000
     transport: pi-native
     apiKey: <gateway token>
   # …one block per provider; catalog = bundled, not served
@@ -98,7 +98,7 @@ providers:
 
 ## Related
 
-- `docs/fork-maintenance.md` → "Service host (Mac mini)": plists, tunnel LaunchAgent, cutover order, `sync-upstream.ts deploy`.
+- `docs/fork-maintenance.md` → "Auth services" (`#auth-services`) and "Remote service host (optional)" (`#remote-service-host-optional`): plists, SSH local-forward command, cutover order, `sync-upstream.ts deploy`.
 - `docs/auth-broker-gateway.md`: broker/gateway endpoints, snapshot cache, pi-native.
 - `docs/solutions/workflow-issues/upstream-sync-history-truncated-fork.md`: sync workflow whose service-restart section assumed co-located services.
 - can1357/oh-my-pi#2420 (open): distribute a provider catalog from broker/gateway to clients — would close the bundled-catalog drift gap.
