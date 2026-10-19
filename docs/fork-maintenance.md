@@ -364,6 +364,60 @@ For any future local change:
 
 <!-- Appended by scripts/sync-upstream.ts; newest first. -->
 
+### 2026-10-19 — v18.12.2 → v18.12.3
+
+- kept 6106d48f01 feat(ai): enforce Cursor execution policy rejections
+- kept 05ff8f9392 fix(ai,coding-agent): normalize gateway model catalog metadata
+- kept 792773e3a3 chore(dev): preserve fork-local development configuration
+- kept 5dc13b9695 fix(natives): diagnose and safely promote workspace addons
+- kept fd3e8d1bd4 chore(fork): automate parentless syncs with verified npm natives
+- kept e5e75b5e58 docs(fork): retire macOS 27 Bazel overlay in favor of npm-native syncs
+- kept 734fca831b chore(fork): promote automatically once sync verification passes
+- kept 4205290693 chore(dev): pin the shared mnemopi bank for worktree sessions
+- kept 92866dd11a fix(sync): clear stale unregistered worktree directories
+- kept 4b71c4b253 fix(coding-agent): decide non-symlink containment by the parent directory
+- kept 35e976bc85 docs(solutions): capture macOS hard-link realpath containment learning
+- kept 4dddc37c19 docs(solutions): record rejection of context-mode plugin for omp
+- kept b962592112 fix(ai): always emit context_length/max_tokens (null fallback) on gateway /v1/models
+- kept 9156f8f13e fix(sync): fall back to bazel-built natives when npm publish lags the upstream tag
+- kept ce0361950d refactor(sync): classify fork records by file paths only, drop subject check
+- kept 7cf1065d4d feat(sync): record manual-review acceptances in a durable patch-id ledger
+- kept 06eee32f23 feat(sync): require pinned repo-local git identity and add sync-log squash script
+- kept e4a2dca9bc fix(sync): accept native leaves when the core meta publish lags
+- kept 0c7be0300a docs(ai): document Cloud Code Assist schema rejection workaround
+- kept 00b800cfbb fix: resolve Bun executable before setting omp process name
+- kept 81ee2b6f80 chore(fork): record manual-review acceptances
+- kept b8bbb14f4b chore(config): enable jbcontext MCP server
+- kept b8ad384ed4 chore(deps): pin Bun package manager to v1.4.2
+- kept 65b99c73e1 chore(fork): record manual-review acceptances
+- kept c13c5a9f36 chore(fork): ignore the sync-upstream resume checkpoint
+- kept d95cdbed0a fix(fork): align gateway checks with v18.2.8 replant
+- kept 1c0c6a96f0 fix(auth-gateway): exclude MCP credentials from health checks
+- kept db65f9f352 fix(sync): gate service restarts on versioned readiness
+- kept 54c93a3911 fix(sync): create the sync worktree as a copy-on-write clone
+- kept 38e92cc2f7 feat(sync): deploy auth services to a remote service host
+- kept e60ecb9cb0 docs(fork): record broker-client decision, refresh sync learning
+- kept 85021d2734 docs(fork): document usage-history backfill and remote login pitfalls
+- kept 76c08f2075 fix(ai): name gateway models by provider in /v1/models
+- kept 983392fd79 fix(ai,coding-agent): match account policies on token-derived identity
+- kept a4221438a4 chore(fork): record manual-review acceptances
+- kept aadc19dc3a docs(fork): capture off-main fixup folds, refresh fork-maintenance learnings
+- kept a1cb8c4e78 chore: pin bun packageManager to 1.4.3
+- kept 0ca5fa58d9 chore(fork): record manual-review acceptances
+- kept 2b3d4bdf7a chore(fork): consolidate sync log through v18.9.2
+- kept a2d864cc57 chore(fork): sync log for v18.10.0
+- kept 436115bded chore(fork): sync log for v18.10.1
+- kept 0a0e8ef279 docs(fork): match mini runbook to FileVault-on setup
+- kept 8914b80d7d chore(fork): sync log for v18.10.3
+- kept 870651c0e1 chore(fork): sync log for v18.10.4
+- kept f89b6a8d6b chore(fork): sync log for v18.11.0
+- kept 1a3907705c chore(fork): sync log for v18.11.1
+- kept eba026a4c5 fix(sync-upstream): validated remote service checkout paths
+- kept 229bcb4f2b chore(fork): sync log for v18.11.3
+- kept 7678e757a3 chore(fork): sync log for v18.12.0
+- kept 7f849130df chore(fork): sync log for v18.12.1
+- kept e4da281a78 chore(fork): sync log for v18.12.2
+
 ### 2026-10-18 — v18.12.1 → v18.12.2
 
 - kept acb6d7a719 feat(ai): enforce Cursor execution policy rejections
