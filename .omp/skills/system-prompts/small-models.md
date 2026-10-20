@@ -1,6 +1,6 @@
 # Prompting Small Models (≤2B)
 
-Tiny models (LFM2-350M/700M, Qwen 0.5B, Gemma 2B) are pattern-completers, not instruction-followers. A prompt carries roughly 3–5 constraints before rules start displacing each other. Spend that budget on output shape; enforce everything else in code.
+Tiny models (LFM2.5-230M/350M, Qwen 0.5B, Gemma 2B) are pattern-completers, not instruction-followers. A prompt carries roughly 3–5 constraints before rules start displacing each other. Spend that budget on output shape; enforce everything else in code.
 
 Shared prompts MUST be written for the smallest model that consumes them — big models tolerate simple prompts; tiny models die on complex ones.
 
@@ -23,7 +23,7 @@ The strongest format control never enters the prompt:
 |---|---|
 |Assistant prefill (`<title>`, `{"name": `)|Commits the model into the format; kills preamble failures|
 |Stop strings + token caps|Bound runaway output better than "be brief"|
-|Greedy decoding / temp ≤0.3|Removes the format lottery (LFM2: temp 0.3, min_p 0.15, rep. penalty 1.05)|
+|Greedy decoding / temp ≤0.3|Removes the format lottery (this repo: `tiny/title-protocol.ts` sends one greedy generation — no sampling knobs)|
 |Post-processing in code|Strips quotes/punctuation/stray tags regardless of what the model emits|
 
 Code already neutralizes a failure mode? DELETE its rule. Each dropped rule buys headroom for the rules that matter.
@@ -37,7 +37,7 @@ Code already neutralizes a failure mode? DELETE its rule. Each dropped rule buys
 
 ## Case Study: Session Titles
 
-`packages/coding-agent/src/prompts/system/title-system.md`, consumed by LFM2-350M/700M on-device (`tiny/worker.ts` prefills `<title>`, stops on `</title>`, caps 20 tokens; `normalizeGeneratedTitle` strips quotes/punctuation/tags in code).
+`packages/coding-agent/src/prompts/system/title-system.md`, consumed by LFM2.5-230M/350M on-device (`tiny/title-client.ts` prefills `<title>`, stops on `</title>`, caps 20 tokens; `normalizeGeneratedTitle` in `tiny/text.ts` strips quotes/punctuation/tags in code).
 
 ```
 WRONG (instruction-heavy, negation list, output-only examples):

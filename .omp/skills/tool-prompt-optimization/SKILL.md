@@ -93,7 +93,7 @@ Agents choose from prose, not source: tell WHEN/WHY, NEVER internal HOW.
 - `read.md`: every covered source — file/dir/archive/sqlite/PDF/URL — prevents `cat`/`curl`/`tar`; omit chunker, binary sniffer, cache layer.
 - `lsp.md`: "You MUST use `lsp` whenever a language server is available — safer than text-based alternatives." Omit LSP wire protocol, server lifecycle, capability negotiation.
 - `ast_edit`: metavariable syntax/workflow: "Loosest existence check: `pat: 'executeBash'` with narrow paths"; omit AST engine, query compilation, tree-sitter grammar selection.
-- `hashline.md` (this repo): patch grammar — anchors, ops, payloads, ranges — and successful edit shapes. Hide `tryRecoverHashlineWithCache`, fuzz factor, bigram tables, `findUniqueSuffixMatch`, `untilAborted`, `formatGroupedFiles`; agent sees only "the tool resolved your typo" or "the anchor was stale, re-read".
+- `hashline.md` (this repo, `crates/pi-edit/prompts/hashline.md`): patch grammar — anchors, ops, payloads, ranges — and successful edit shapes. Hide `try_recover`, `apply_with_recovery`, `recover_target`, fuzz factor, bigram tables, `reg_suffix`, `formatGroupedFiles`; agent sees only "the tool resolved your typo" or "the anchor was stale, re-read".
 
 If a detail cannot change agent behavior, it does NOT belong. Each sentence MUST shift an agent decision.
 
