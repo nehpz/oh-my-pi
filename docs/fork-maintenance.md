@@ -364,6 +364,62 @@ For any future local change:
 
 <!-- Appended by scripts/sync-upstream.ts; newest first. -->
 
+### 2026-10-26 — v18.12.6 → v18.13.0
+
+- kept a037639a1d feat(ai): enforce Cursor execution policy rejections
+- kept f27809e90c fix(ai,coding-agent): normalize gateway model catalog metadata
+- kept e4bb57b546 chore(dev): preserve fork-local development configuration
+- kept 4b2a02c40a fix(natives): diagnose and safely promote workspace addons
+- kept a4e1e88249 chore(fork): automate parentless syncs with verified npm natives
+- kept c4d0bb1fae docs(fork): retire macOS 27 Bazel overlay in favor of npm-native syncs
+- kept 534d75f5da chore(fork): promote automatically once sync verification passes
+- kept 365f136bec chore(dev): pin the shared mnemopi bank for worktree sessions
+- kept 9dd2b88408 fix(sync): clear stale unregistered worktree directories
+- kept ec066efb46 fix(coding-agent): decide non-symlink containment by the parent directory
+- kept c451f72e0e docs(solutions): capture macOS hard-link realpath containment learning
+- kept ba7b177b16 docs(solutions): record rejection of context-mode plugin for omp
+- kept ce34ae92f8 fix(ai): always emit context_length/max_tokens (null fallback) on gateway /v1/models
+- kept 4df5b68f4e fix(sync): fall back to bazel-built natives when npm publish lags the upstream tag
+- kept d53a380716 refactor(sync): classify fork records by file paths only, drop subject check
+- kept b4d47bf4d7 feat(sync): record manual-review acceptances in a durable patch-id ledger
+- kept 52cccdf65c feat(sync): require pinned repo-local git identity and add sync-log squash script
+- kept cb084a4387 fix(sync): accept native leaves when the core meta publish lags
+- kept d1bda352ef docs(ai): document Cloud Code Assist schema rejection workaround
+- kept d1816c5b33 fix: resolve Bun executable before setting omp process name
+- kept 784c0ae2f3 chore(fork): record manual-review acceptances
+- kept 22582e3a0d chore(config): enable jbcontext MCP server
+- kept 4a2b0fb191 chore(fork): record manual-review acceptances
+- kept 13d3171cf7 chore(fork): ignore the sync-upstream resume checkpoint
+- kept fafb9a3fe4 fix(fork): align gateway checks with v18.2.8 replant
+- kept f08694a2ec fix(auth-gateway): exclude MCP credentials from health checks
+- kept be8885c2d1 fix(sync): gate service restarts on versioned readiness
+- kept 82ac0a1499 fix(sync): create the sync worktree as a copy-on-write clone
+- kept 2fb3fa80f9 feat(sync): deploy auth services to a remote service host
+- kept b289e3c971 docs(fork): record broker-client decision, refresh sync learning
+- kept 12e4d4fffb docs(fork): document usage-history backfill and remote login pitfalls
+- kept af6f8df867 fix(ai): name gateway models by provider in /v1/models
+- kept 352bb0753e chore(fork): record manual-review acceptances
+- kept 2c7511656d docs(fork): capture off-main fixup folds, refresh fork-maintenance learnings
+- kept fcda745ac6 chore(fork): record manual-review acceptances
+- kept e870b059dd chore(fork): consolidate sync log through v18.9.2
+- kept cce148d2a0 chore(fork): sync log for v18.10.0
+- kept 0f4dbe37ed chore(fork): sync log for v18.10.1
+- kept 0a002d2713 docs(fork): match mini runbook to FileVault-on setup
+- kept 55b6f9bb77 chore(fork): sync log for v18.10.3
+- kept f838531b34 chore(fork): sync log for v18.10.4
+- kept dcb7b26111 chore(fork): sync log for v18.11.0
+- kept 8249cbfbbf chore(fork): sync log for v18.11.1
+- kept 2293686e1f fix(sync-upstream): validated remote service checkout paths
+- kept feef7baee3 chore(fork): sync log for v18.11.3
+- kept 022c14ab40 chore(fork): sync log for v18.12.0
+- kept eacce71e95 chore(fork): sync log for v18.12.1
+- kept 7c6c602f71 chore(fork): sync log for v18.12.2
+- kept 7d32eac91e chore(fork): sync log for v18.12.3
+- kept d33f19c9f2 skills: curate omp project skills against current code
+- kept c41b3bcaaf chore(fork): sync log for v18.12.4
+- kept dca921b87c chore(fork): sync log for v18.12.5
+- kept c97af33477 chore(fork): sync log for v18.12.6
+
 ### 2026-10-21 — v18.12.5 → v18.12.6
 
 - kept 8ad759c047 feat(ai): enforce Cursor execution policy rejections
